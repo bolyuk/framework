@@ -1,7 +1,7 @@
 package bl0.bjs.socket.services.proxy;
 
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.logging.ILogger;
+import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IResponseAwaiter;
 import bl0.bjs.socket.services.IWebSocketService;
 import org.java_websocket.WebSocket;

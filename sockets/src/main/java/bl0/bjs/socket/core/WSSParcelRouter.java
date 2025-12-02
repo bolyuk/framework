@@ -2,7 +2,7 @@ package bl0.bjs.socket.core;
 
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.async.queue.Queue;
+import bl0.bjs.async.queue.Queue;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.socket.services.IWebSocketService;
 import bl0.bjs.socket.services.proxy.WSSResponse;
@@ -42,7 +42,7 @@ public class WSSParcelRouter extends BJSBaseClass {
             if (!IWebSocketService.class.isAssignableFrom(clazz))
                 throw new ClassCastException(parcel.getPath()+" is not assignable to IWebSocketService");
 
-            Object service = ctx.getServiceHelper().getService((Class<? extends IWebSocketService>) clazz);
+            Object service = ctx.getServiceContainer().getService((Class<? extends IWebSocketService>) clazz);
 
             if(service == null)
                 throw new NullPointerException(parcel.getPath()+" does not exist");

@@ -1,7 +1,7 @@
 package bl0.bjs.socket.core.communication;
 
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.logging.ILogger;
+import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.WSSParcelRouter;
 import bl0.bjs.socket.core.WSSResponseRouter;

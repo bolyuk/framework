@@ -12,7 +12,12 @@
         <module>db</module>
         <module>sockets</module>
         <module>common</module>
-        <module>heavy</module>
+        <module>core</module>
+        <module>logging</module>
+        <module>eventbus</module>
+        <module>services</module>
+        <module>async</module>
+        <module>boot</module>
     </modules>
 
     <properties>

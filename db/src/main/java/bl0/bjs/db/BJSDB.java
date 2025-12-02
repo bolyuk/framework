@@ -2,7 +2,7 @@ package bl0.bjs.db;
 
 import bl0.bjs.db.util.HibernateUtil;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.logging.ILogger;
+import bl0.bjs.logging.ILogger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;

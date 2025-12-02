@@ -1,6 +1,6 @@
 package bl0.bjs.common.base;
 
-import bl0.bjs.common.core.logging.ILogger;
+import bl0.bjs.logging.ILogger;
 
 public abstract class BJSBaseClass {
     protected final IContext ctx;
