@@ -1,11 +1,11 @@
-package org.bl0.bjs.db.util;
+package bl0.bjs.db.util;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.bl0.bjs.db.BJSDB;
-import org.bl0.bjs.db.interfaces.HasID;
+import bl0.bjs.db.BJSDB;
+import bl0.bjs.db.interfaces.HasID;
 import org.hibernate.Session;
 
 import java.io.Serializable;

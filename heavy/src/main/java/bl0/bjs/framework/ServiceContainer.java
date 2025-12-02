@@ -1,10 +1,10 @@
 package bl0.bjs.framework;
 
-import org.bl0.framework.common.base.service.IServiceContainer;
-import org.bl0.framework.common.base.service.Service;
-import org.bl0.framework.common.base.service.interfaces.IService;
-import org.bl0.framework.common.core.logging.containers.ILogBatch;
-import org.bl0.framework.common.sys.events.ServiceEvent;
+import bl0.bjs.common.base.service.IServiceContainer;
+import bl0.bjs.common.base.service.Service;
+import bl0.bjs.common.base.service.interfaces.IService;
+import bl0.bjs.common.core.logging.containers.ILogBatch;
+import bl0.bjs.common.sys.events.ServiceEvent;
 import bl0.bjs.framework.logging.DefaultLogger;
 import bl0.bjs.framework.utils.ClassUtils;
 

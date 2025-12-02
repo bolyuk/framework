@@ -1,4 +1,4 @@
-package org.bl0.bjs.db.util;
+package bl0.bjs.db.util;
 
 import jakarta.persistence.Entity;
 import org.hibernate.SessionFactory;

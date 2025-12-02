@@ -1,12 +1,12 @@
 package bl0.bjs.framework.core;
 
 import bl0.bjs.framework.Context;
-import org.bl0.framework.common.base.IContext;
-import org.bl0.framework.common.core.logging.ILogger;
-import org.bl0.framework.common.core.logging.Level;
-import org.bl0.framework.common.core.logging.containers.LogEntry;
-import org.bl0.framework.common.sys.events.LogEvent;
-import org.bl0.framework.common.utils.LogParser;
+import bl0.bjs.common.base.IContext;
+import bl0.bjs.common.core.logging.ILogger;
+import bl0.bjs.common.core.logging.Level;
+import bl0.bjs.common.core.logging.containers.LogEntry;
+import bl0.bjs.common.sys.events.LogEvent;
+import bl0.bjs.common.utils.LogParser;
 import bl0.bjs.framework.files.LocalStorage;
 
 public class BJSInitializer {

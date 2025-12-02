@@ -1,7 +1,7 @@
 package bl0.bjs.framework.eventbus;
 
-import org.bl0.framework.common.base.eventbus.IEventBusController;
-import org.bl0.framework.common.base.eventbus.IEventBusNode;
+import bl0.bjs.common.base.eventbus.IEventBusController;
+import bl0.bjs.common.base.eventbus.IEventBusNode;
 
 public class EventBusController<T extends IEventBusNode<R>,R> implements IEventBusController<T, R> {
     private final EventBus eventBus;

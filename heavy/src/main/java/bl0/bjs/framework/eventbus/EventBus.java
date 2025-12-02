@@ -1,8 +1,8 @@
 package bl0.bjs.framework.eventbus;
 
-import org.bl0.framework.common.base.eventbus.IEventBus;
-import org.bl0.framework.common.base.eventbus.IEventBusController;
-import org.bl0.framework.common.base.eventbus.IEventBusNode;
+import bl0.bjs.common.base.eventbus.IEventBus;
+import bl0.bjs.common.base.eventbus.IEventBusController;
+import bl0.bjs.common.base.eventbus.IEventBusNode;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;

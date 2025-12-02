@@ -1,6 +1,6 @@
 package bl0.bjs.framework.files;
 
-import org.bl0.framework.common.base.IStorage;
+import bl0.bjs.common.base.IStorage;
 import bl0.bjs.framework.utils.FilesUtils;
 
 import java.nio.file.Path;

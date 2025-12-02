@@ -2,13 +2,13 @@ package bl0.bjs.framework.logging;
 
 
 import bl0.bjs.framework.Context;
-import org.bl0.framework.common.base.eventbus.IEventBusController;
-import org.bl0.framework.common.core.logging.ILogger;
-import org.bl0.framework.common.core.logging.Level;
-import org.bl0.framework.common.core.logging.containers.ILogBatch;
-import org.bl0.framework.common.core.logging.containers.LogEntry;
-import org.bl0.framework.common.sys.events.LogBatchEvent;
-import org.bl0.framework.common.sys.events.LogEvent;
+import bl0.bjs.common.base.eventbus.IEventBusController;
+import bl0.bjs.common.core.logging.ILogger;
+import bl0.bjs.common.core.logging.Level;
+import bl0.bjs.common.core.logging.containers.ILogBatch;
+import bl0.bjs.common.core.logging.containers.LogEntry;
+import bl0.bjs.common.sys.events.LogBatchEvent;
+import bl0.bjs.common.sys.events.LogEvent;
 
 public class DefaultLogger implements ILogger {
     final IEventBusController<LogEvent, LogEvent.LogPayload> everyLogController;

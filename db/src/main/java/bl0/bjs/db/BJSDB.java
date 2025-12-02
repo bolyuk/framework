@@ -1,8 +1,8 @@
-package org.bl0.bjs.db;
+package bl0.bjs.db;
 
-import org.bl0.bjs.db.util.HibernateUtil;
-import org.bl0.framework.common.base.IContext;
-import org.bl0.framework.common.core.logging.ILogger;
+import bl0.bjs.db.util.HibernateUtil;
+import bl0.bjs.common.base.IContext;
+import bl0.bjs.common.core.logging.ILogger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;

@@ -1,9 +1,9 @@
 package bl0.bjs.framework;
 
-import org.bl0.framework.common.base.eventbus.IEventBus;
-import org.bl0.framework.common.base.IContext;
-import org.bl0.framework.common.base.service.IServiceContainer;
-import org.bl0.framework.common.core.logging.ILogger;
+import bl0.bjs.common.base.eventbus.IEventBus;
+import bl0.bjs.common.base.IContext;
+import bl0.bjs.common.base.service.IServiceContainer;
+import bl0.bjs.common.core.logging.ILogger;
 import bl0.bjs.framework.eventbus.EventBus;
 import bl0.bjs.framework.files.LocalStorage;
 import bl0.bjs.framework.logging.DefaultLogger;

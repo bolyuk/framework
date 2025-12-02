@@ -1,9 +1,9 @@
 package bl0.bjs.framework.logging;
 
 
-import org.bl0.framework.common.core.logging.Level;
-import org.bl0.framework.common.core.logging.containers.ILogBatch;
-import org.bl0.framework.common.core.logging.containers.LogEntry;
+import bl0.bjs.common.core.logging.Level;
+import bl0.bjs.common.core.logging.containers.ILogBatch;
+import bl0.bjs.common.core.logging.containers.LogEntry;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
