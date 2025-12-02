@@ -1,8 +1,8 @@
 package bl0.bjs.common.core.tuple;
 
 public class Pair<T, C> {
-    public final T first;
-    public final C second;
+    public T first;
+    public C second;
 
     public Pair(T first, C second) {
         this.first = first;

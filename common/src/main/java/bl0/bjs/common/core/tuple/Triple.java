@@ -1,9 +1,9 @@
 package bl0.bjs.common.core.tuple;
 
 public class Triple<T, C, K> {
-    public final T first;
-    public final C second;
-    public final K third;
+    public T first;
+    public C second;
+    public K third;
 
     public Triple(T first, C second, K third) {
         this.first = first;
