@@ -60,4 +60,13 @@ public class BJSInitializer {
     private void catchExceptions(Thread t, Throwable e) {
         logger.add(new LogEntry("Uncaught exception!", null, e, Level.FATAL));
     }
+
+    public static IContext defaultInit(){
+        BJSInitializer.drawCoolLogo();
+
+        BJSInitializer initializer = new BJSInitializer();
+        initializer.showLogsInConsole();
+        initializer.startExceptionHandler();
+        return initializer.getContext();
+    }
 }

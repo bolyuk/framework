@@ -1,12 +1,13 @@
-package bl0.bjs.socket.core;
+package bl0.bjs.socket.services.proxy;
 
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.async.queue.Queue;
 import bl0.bjs.common.core.tuple.Pair;
+import bl0.bjs.socket.core.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.services.proxy.WSSResponse;
-import bl0.bjs.socket.services.proxy.WSSParcel;
+import bl0.bjs.socket.core.data.WSSResponse;
+import bl0.bjs.socket.core.data.WSSParcel;
 import org.java_websocket.WebSocket;
 
 import java.lang.reflect.Method;
@@ -16,7 +17,7 @@ import static bl0.bjs.socket.C.GSON;
 
 public class WSSParcelRouter extends BJSBaseClass {
 
-    private final Queue<Pair<WebSocket, WSSParcel>> queue;
+    private final Queue<Pair<NamedSocket, WSSParcel>> queue;
 
     public WSSParcelRouter(IContext ctx) {
         super(ctx);
@@ -24,16 +25,16 @@ public class WSSParcelRouter extends BJSBaseClass {
         queue.setMaxBatchSize(1);
     }
 
-    public void pass(WSSParcel parcel, WebSocket socket) {
+    public void pass(WSSParcel parcel, NamedSocket socket) {
         queue.pass(List.of(Pair.of(socket,parcel)));
     }
 
-    private void exec(Queue<Pair<WebSocket, WSSParcel>> queue, List<Pair<WebSocket, WSSParcel>> list){
-        WebSocket socket = list.getFirst().first;
-
+    private void exec(Queue<Pair<NamedSocket, WSSParcel>> queue, List<Pair<NamedSocket, WSSParcel>> list){
+        NamedSocket socket = list.getFirst().first;
         WSSParcel parcel = list.getFirst().second;
-        WSSResponse answer = new WSSResponse();
 
+        WSSResponse answer = new WSSResponse();
+        answer.setTo(parcel.getFrom());
         answer.setUuid(parcel.getUuid());
 
         try {
@@ -59,9 +60,12 @@ public class WSSParcelRouter extends BJSBaseClass {
             if (method.getReturnType() != Void.TYPE) {
                 socket.send(GSON.toJson(answer));
             }
+            answer.setSuccess(true);
         } catch (Exception e){
-            answer.setData(GSON.toJson(e));
-            answer.setType(e.getClass().getName());
+            l.err(e);
+            answer.setSuccess(false);
+            answer.setData(GSON.toJson(e.getMessage()));
+            answer.setType(String.class.getName());
             socket.send(GSON.toJson(answer));
         }
     }

@@ -3,8 +3,9 @@ package bl0.bjs.socket.services.proxy;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IResponseAwaiter;
+import bl0.bjs.socket.core.NamedSocket;
+import bl0.bjs.socket.core.data.WSSParcel;
 import bl0.bjs.socket.services.IWebSocketService;
-import org.java_websocket.WebSocket;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -14,15 +15,15 @@ import static bl0.bjs.socket.C.GSON;
 
 public class WSSProxy {
     @SuppressWarnings("unchecked")
-    public static <T extends IWebSocketService> T bind(Class<T> iface, WebSocket socket, IContext ctx, IResponseAwaiter waiter) {
+    public static <T extends IWebSocketService> T bind(Class<T> iface, NamedSocket socket, IContext ctx, IResponseAwaiter waiter, String name) {
         ILogger l = ctx.generateLogger(iface);
         return (T) Proxy.newProxyInstance(
                 iface.getClassLoader(),
                 new Class<?>[]{iface},
-                (proxy, method, args) -> proxyMethod(method, args, socket, iface, l, waiter));
+                (proxy, method, args) -> proxyMethod(method, args, socket, iface, l, waiter, name));
     }
 
-    private static Object proxyMethod(Method method, Object[] args, WebSocket socket, Class<?> iface, ILogger l, IResponseAwaiter waiter) {
+    private static Object proxyMethod(Method method, Object[] args, NamedSocket socket, Class<?> iface, ILogger l, IResponseAwaiter waiter, String name) {
         if(socket == null || socket.isClosed())
             throw new IllegalStateException("Socket is closed!");
 
@@ -31,6 +32,8 @@ public class WSSProxy {
 
         parcel.setMethod(method.getName());
         parcel.setUuid(uuid);
+        parcel.setFrom(name);
+        parcel.setTo(socket.getName());
         parcel.setPath(iface.getName());
 
         int len = args == null ? 0 : args.length;
@@ -45,13 +48,12 @@ public class WSSProxy {
         parcel.setParams(params);
         parcel.setParamTypes(paramTypes);
 
-        l.log(iface.getSimpleName()+"."+method.getName()+" ip: "+socket.getRemoteSocketAddress());
+        l.log(iface.getSimpleName()+"."+method.getName()+" ip: "+socket.getAdress());
 
+        socket.send(GSON.toJson(parcel));
         if (method.getReturnType() == Void.TYPE) {
-            socket.send(GSON.toJson(parcel));
             return null;
         } else {
-            socket.send(GSON.toJson(parcel));
             return waiter.await(parcel.getUuid());
         }
     }

@@ -1,10 +1,10 @@
-package bl0.bjs.socket.core;
+package bl0.bjs.socket.services.proxy;
 
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.socket.base.IResponseAwaiter;
-import bl0.bjs.socket.services.proxy.WSSResponse;
+import bl0.bjs.socket.core.data.WSSResponse;
 import com.google.gson.Gson;
 
 import java.util.UUID;

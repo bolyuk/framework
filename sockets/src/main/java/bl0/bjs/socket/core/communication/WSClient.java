@@ -3,11 +3,12 @@ package bl0.bjs.socket.core.communication;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
-import bl0.bjs.socket.core.WSSResponseRouter;
-import bl0.bjs.socket.core.WSSParcelRouter;
+import bl0.bjs.socket.services.proxy.WSSResponseRouter;
+import bl0.bjs.socket.services.proxy.WSSParcelRouter;
+import bl0.bjs.socket.core.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.services.proxy.WSSResponse;
-import bl0.bjs.socket.services.proxy.WSSParcel;
+import bl0.bjs.socket.core.data.WSSResponse;
+import bl0.bjs.socket.core.data.WSSParcel;
 import bl0.bjs.socket.services.proxy.WSSProxy;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -26,8 +27,11 @@ public class WSClient extends WebSocketClient implements IWSBase {
     protected final WSSResponseRouter responseRouter;
     protected final WSSParcelRouter parcelRouter;
 
-    public WSClient(IContext context, URI serverUri) {
+    protected final String name;
+
+    public WSClient(IContext context, URI serverUri, String name) {
         super(serverUri);
+        this.name = name;
         this.ctx = context;
         this.l = ctx.generateLogger(this.getClass());
 
@@ -37,12 +41,12 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     @Override
     public <T extends IWebSocketService> T get(Class<T> service) {
-        return WSSProxy.bind(service, getConnection(), ctx, responseRouter);
+        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), null), ctx, responseRouter, this.name);
     }
 
-    @Override //TODO
+    @Override
     public <T extends IWebSocketService> T getNamed(Class<T> service, String name) {
-        return null;
+        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), name), ctx, responseRouter, this.name);
     }
 
     @Override //TODO
@@ -72,7 +76,8 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     @Override
     public void onClose(int i, String s, boolean b) {
-        l.warn("Connection closed");
+        l.warn("Connection closed [ "+s+" ], reconnecting...");
+        reconnect();
     }
 
     @Override
