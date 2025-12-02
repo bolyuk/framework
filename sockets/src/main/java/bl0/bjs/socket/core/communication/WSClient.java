@@ -3,12 +3,14 @@ package bl0.bjs.socket.core.communication;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
-import bl0.bjs.socket.core.Socket;
-import bl0.bjs.socket.core.SocketCallbackContainer;
+import bl0.bjs.socket.core.WSSResponseRouter;
+import bl0.bjs.socket.core.WSSParcelRouter;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.services.proxy.WSSAnswer;
+import bl0.bjs.socket.services.proxy.WSSResponse;
 import bl0.bjs.socket.services.proxy.WSSParcel;
 import bl0.bjs.socket.services.proxy.WSSProxy;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
@@ -21,17 +23,21 @@ public class WSClient extends WebSocketClient implements IWSBase {
     protected final ILogger l;
     protected final IContext ctx;
 
-    private final SocketCallbackContainer callbackContainer;
+    protected final WSSResponseRouter responseRouter;
+    protected final WSSParcelRouter parcelRouter;
+
     public WSClient(IContext context, URI serverUri) {
         super(serverUri);
         this.ctx = context;
         this.l = ctx.generateLogger(this.getClass());
-        this.callbackContainer = new SocketCallbackContainer(context);
+
+        this.responseRouter = new WSSResponseRouter(context);
+        this.parcelRouter = new WSSParcelRouter(context);
     }
 
     @Override
     public <T extends IWebSocketService> T get(Class<T> service) {
-        return WSSProxy.bind(service, new Socket(getConnection(), callbackContainer), ctx);
+        return WSSProxy.bind(service, getConnection(), ctx, responseRouter);
     }
 
     @Override //TODO
@@ -46,10 +52,17 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     @Override
     public void onMessage(String s) {
-        WSSAnswer parcel = GSON.fromJson(s, WSSAnswer.class);
-        if(parcel != null)
-            callbackContainer.feed(parcel);
-        
+        JsonObject obj = JsonParser.parseString(s).getAsJsonObject();
+
+        if (obj.has("data") && obj.has("type")) {
+            WSSResponse answer = GSON.fromJson(obj, WSSResponse.class);
+            responseRouter.pass(answer);
+        } else if (obj.has("path") && obj.has("method")) {
+            WSSParcel parcel = GSON.fromJson(obj, WSSParcel.class);
+            parcelRouter.pass(parcel, getConnection());
+        } else {
+            l.warn("Unknown WS message: " + s);
+        }
     }
 
     @Override

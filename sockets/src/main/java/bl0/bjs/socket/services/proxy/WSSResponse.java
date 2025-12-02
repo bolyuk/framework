@@ -6,7 +6,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Getter @Setter
-public class WSSAnswer {
+public class WSSResponse {
     UUID uuid;
     String data;
     String type;

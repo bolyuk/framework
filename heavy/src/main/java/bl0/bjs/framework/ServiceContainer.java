@@ -48,7 +48,7 @@ public class ServiceContainer implements IServiceContainer {
 
     @Override
     public boolean registerService(Class<?> serviceClass, ILogBatch batch) {
-        l.genLocalBatchIfNull(batch);
+        batch = l.genLocalBatchIfNull(batch);
 
         Service annotation = serviceClass.getAnnotation(Service.class);
         if (annotation == null) {
