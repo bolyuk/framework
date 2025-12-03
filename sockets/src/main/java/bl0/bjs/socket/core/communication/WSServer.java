@@ -1,8 +1,12 @@
 package bl0.bjs.socket.core.communication;
 
+import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
+import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
+import bl0.bjs.socket.core.ParcelQueue;
+import bl0.bjs.socket.core.data.WSBaseParcel;
 import bl0.bjs.socket.core.data.WSSRegParcel;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
@@ -11,6 +15,8 @@ import bl0.bjs.socket.services.IWebSocketService;
 import bl0.bjs.socket.core.data.WSSParcel;
 import bl0.bjs.socket.services.proxy.WSSProxy;
 import bl0.bjs.socket.core.data.WSSResponse;
+import bl0.bjs.socket.utils.ParcelErrors;
+import bl0.bjs.socket.utils.ParcelUtils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.java_websocket.WebSocket;
@@ -33,13 +39,18 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     protected final ConcurrentHashMap<NamedSocket, List<String>> clients = new ConcurrentHashMap<>();
 
+    protected final QueuePool<String, Pair<NamedSocket, WSBaseParcel>, ParcelQueue> queuePool;
+
     public WSServer(IContext context, InetSocketAddress address) {
         super(address);
         this.ctx = context;
         this.l = ctx.generateLogger(this.getClass());
 
         this.responseRouter = new WSSResponseRouter(context);
-        this.parcelRouter = new WSSParcelRouter(context);
+        this.parcelRouter = new WSSParcelRouter(context, NamedSocket.SERVER);
+
+        this.queuePool = new QueuePool<>(ctx, (_) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
+        this.queuePool.setMaxBatchSize(1);
     }
 
     @Override
@@ -80,26 +91,35 @@ public class WSServer extends WebSocketServer implements IWSBase {
        }
     }
 
-    @Override // TODO need to delegate requests to another nodes if service named or not present here
-    public void onMessage(WebSocket webSocket, String s) {
-        JsonObject obj = JsonParser.parseString(s).getAsJsonObject();
-        NamedSocket socket = find(webSocket);
+    @Override
+    public void onMessage(WebSocket webSocket, String json) {
+        NamedSocket client = find(webSocket);
+        if(client == null)
+            client = new NamedSocket(ctx, webSocket, null, false);
 
-        if (obj.has("data") && obj.has("type")) {
-            WSSResponse answer = GSON.fromJson(obj, WSSResponse.class);
-            responseRouter.pass(answer);
-        } else if (obj.has("path") && obj.has("method")) {
-            WSSParcel parcel = GSON.fromJson(obj, WSSParcel.class);
-            parcelRouter.pass(parcel, socket);
-        } else if(obj.has("name") && obj.has("services")) {
-            if(socket != null){
-                l.warn(socket.getName()+" tried to authorize again...");
-                return;
-            }
-            WSSRegParcel regParcel = GSON.fromJson(obj, WSSRegParcel.class);
-            clients.put(new NamedSocket(ctx, webSocket, regParcel.getName()), List.of(regParcel.getServices()));
+        WSBaseParcel bParcel = ParcelUtils.tryParse(json, client, l, NamedSocket.SERVER);
+
+        if(bParcel == null)
+            return;
+
+        if(!authGateway(bParcel, client, l))
+            return;
+
+        if(registerIfNeeded(client, bParcel))
+            return;
+
+        if(bParcel.getTo() != null && bParcel.getTo().equals(NamedSocket.SERVER)){
+            queuePool.pass(bParcel.getFrom(), Pair.of(client, bParcel));
         } else {
-            l.warn("Unknown WS message: " + s);
+            String path = bParcel instanceof WSSParcel ? ((WSSParcel) bParcel).getPath() : null;
+            NamedSocket socket = find(path, bParcel.getTo());
+
+            if(socket == null){
+                ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.RECIPIENT_NOT_FOUND,json, client, l, NamedSocket.SERVER);
+            } else {
+                socket.send(json);
+                l.log("parcel rerouted from:"+bParcel.getFrom()+" to:"+bParcel.getTo());
+            }
         }
     }
 
@@ -120,13 +140,41 @@ public class WSServer extends WebSocketServer implements IWSBase {
         for (var data : clients.entrySet()) {
             if(name != null && !data.getKey().getName().equals(name))
                 continue;
-            if(data.getValue() == null)
-                continue;
 
-            if(data.getValue().contains(clazz))
+            if(clazz != null && data.getValue().contains(clazz))
+                return data.getKey();
+
+            if(clazz == null && data.getKey().getName().equals(name))
                 return data.getKey();
         }
         return null;
+    }
+
+    private boolean authGateway(WSBaseParcel parcel, NamedSocket client, ILogger l) {
+        boolean isRegParcel = false;
+        if(parcel instanceof WSSRegParcel regParcel)
+            if(client.isAuthorized() || regParcel.getName() == null || parcel.getTo() == null || !parcel.getTo().equals(NamedSocket.SERVER)){
+                ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.AUTH_WRONG_DATA, null, client, l, NamedSocket.SERVER);
+                return false;
+            } else
+                isRegParcel = true;
+
+        // unauthorized
+        if(!client.isAuthorized() && !isRegParcel){
+            ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.UNAUTHORIZED, null, client, l, NamedSocket.SERVER);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean registerIfNeeded(NamedSocket socket, WSBaseParcel parcel) {
+        if(parcel instanceof WSSRegParcel regParcel){
+            socket = new NamedSocket(ctx, socket.getSocket(), regParcel.getName(), true);
+            clients.put(socket, new ArrayList<>());
+            l.log("client ["+socket.getName()+"] registered");
+            return true;
+        }
+        return false;
     }
 
     private NamedSocket find(WebSocket socket) {

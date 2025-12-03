@@ -10,10 +10,13 @@ public class NamedSocket extends BJSBaseClass {
     private final WebSocket socket;
     private final String name;
 
-    public NamedSocket(IContext ctx, WebSocket socket, String name) {
+    private final boolean isAuthorized;
+
+    public NamedSocket(IContext ctx, WebSocket socket, String name, boolean authorized) {
         super(ctx);
         this.socket = socket;
         this.name = name;
+        this.isAuthorized = authorized;
     }
 
     public String getAddress(){
@@ -27,4 +30,6 @@ public class NamedSocket extends BJSBaseClass {
     public boolean isClosed(){
         return socket.isClosed();
     }
+
+    public static final String SERVER = "SERVER";
 }

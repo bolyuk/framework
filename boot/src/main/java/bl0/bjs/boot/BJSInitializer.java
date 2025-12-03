@@ -13,8 +13,8 @@ public class BJSInitializer {
     private final Context ctx;
     private final ILogger logger;
 
-    public BJSInitializer() {
-        this.ctx = new Context(new LocalStorage(System.getProperty("user.dir")));
+    public BJSInitializer(String hostname) {
+        this.ctx = new Context(new LocalStorage(System.getProperty("user.dir")), hostname);
         this.logger = ctx.generateLogger(this.getClass());
     }
 
@@ -54,17 +54,17 @@ public class BJSInitializer {
         if (data.entry().exception() != null)
             msg += " "+data.entry().exception().getMessage();
 
-        System.out.println(prefix + " " + data.entry().level() + " - " + msg);
+        System.out.println(ctx.getHostname().toUpperCase()+": "+prefix + " " + data.entry().level() + " - " + msg);
     }
 
     private void catchExceptions(Thread t, Throwable e) {
         logger.add(new LogEntry("Uncaught exception!", null, e, Level.FATAL));
     }
 
-    public static IContext defaultInit(){
+    public static IContext defaultInit(String hostname) {
         BJSInitializer.drawCoolLogo();
 
-        BJSInitializer initializer = new BJSInitializer();
+        BJSInitializer initializer = new BJSInitializer(hostname);
         initializer.showLogsInConsole();
         initializer.startExceptionHandler();
         return initializer.getContext();

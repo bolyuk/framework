@@ -1,22 +1,27 @@
 package bl0.bjs.socket.core.communication;
 
+import bl0.bjs.async.AsyncExecutor;
+import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
+import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
+import bl0.bjs.socket.core.ParcelQueue;
+import bl0.bjs.socket.core.data.WSSRegParcel;
+import bl0.bjs.socket.utils.ParcelErrors;
+import bl0.bjs.socket.core.data.WSBaseParcel;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.core.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.core.data.WSSResponse;
-import bl0.bjs.socket.core.data.WSSParcel;
 import bl0.bjs.socket.services.proxy.WSSProxy;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import bl0.bjs.socket.utils.ParcelUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 import static bl0.bjs.socket.C.GSON;
 
@@ -28,6 +33,9 @@ public class WSClient extends WebSocketClient implements IWSBase {
     protected final WSSParcelRouter parcelRouter;
 
     protected final String name;
+    protected NamedSocket socket;
+
+    protected final QueuePool<String, Pair<NamedSocket, WSBaseParcel>, ParcelQueue> queuePool;
 
     public WSClient(IContext context, URI serverUri, String name) {
         super(serverUri);
@@ -36,17 +44,21 @@ public class WSClient extends WebSocketClient implements IWSBase {
         this.l = ctx.generateLogger(this.getClass());
 
         this.responseRouter = new WSSResponseRouter(context);
-        this.parcelRouter = new WSSParcelRouter(context);
+        this.parcelRouter = new WSSParcelRouter(context, name);
+
+
+        this.queuePool = new QueuePool<>(ctx, (_) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
+        this.queuePool.setMaxBatchSize(1);
     }
 
     @Override
     public <T extends IWebSocketService> T get(Class<T> service) {
-        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), null), ctx, responseRouter, this.name);
+        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), null, false), ctx, responseRouter, this.name);
     }
 
     @Override
     public <T extends IWebSocketService> T getNamed(Class<T> service, String name) {
-        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), name), ctx, responseRouter, this.name);
+        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), name, false), ctx, responseRouter, this.name);
     }
 
     @Override //TODO
@@ -56,28 +68,48 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     @Override
     public void onMessage(String s) {
-        JsonObject obj = JsonParser.parseString(s).getAsJsonObject();
+        WSBaseParcel bParcel = ParcelUtils.tryParse(s, socket, l, name);
 
-        if (obj.has("data") && obj.has("type")) {
-            WSSResponse answer = GSON.fromJson(obj, WSSResponse.class);
-            responseRouter.pass(answer);
-        } else if (obj.has("path") && obj.has("method")) {
-            WSSParcel parcel = GSON.fromJson(obj, WSSParcel.class);
-            parcelRouter.pass(parcel, getConnection());
-        } else {
-            l.warn("Unknown WS message: " + s);
+        if(bParcel == null)
+            return;
+
+        if(socket == null){
+            l.err("connection is dead ???");
+            return;
         }
+
+        queuePool.pass(bParcel.getFrom(), Pair.of(socket, bParcel));
     }
 
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
         l.log("Connection opened");
+        socket = new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false);
+        authorize();
     }
 
     @Override
     public void onClose(int i, String s, boolean b) {
+        socket = null;
+        tryReconnect(10, s);
+    }
+
+    private void tryReconnect(int tries, String s) {
+        if(tries == 0) {
+            l.err("Reconnecting failed");
+            return;
+        }
         l.warn("Connection closed [ "+s+" ], reconnecting...");
-        reconnect();
+        AsyncExecutor.register(()-> tryReconnect(tries-1, s));
+    }
+
+    private void authorize(){
+        WSSRegParcel regParcel = new  WSSRegParcel();
+        regParcel.setFrom(name);
+        regParcel.setTo(NamedSocket.SERVER);
+        regParcel.setName(name);
+        regParcel.setUuid(UUID.randomUUID());
+        socket.send(GSON.toJson(regParcel));
     }
 
     @Override

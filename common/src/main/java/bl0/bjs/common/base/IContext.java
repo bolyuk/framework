@@ -12,4 +12,6 @@ public interface IContext {
 
     public ILogger generateLogger(Class<?> clazz);
 
+    public String getHostname();
+
 }

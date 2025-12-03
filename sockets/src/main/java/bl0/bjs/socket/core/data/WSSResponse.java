@@ -6,11 +6,9 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Getter @Setter
-public class WSSResponse {
-    private String to;
-
-    UUID uuid;
+public class WSSResponse extends WSBaseParcel {
     String data;
     String type;
+
     boolean isSuccess;
 }

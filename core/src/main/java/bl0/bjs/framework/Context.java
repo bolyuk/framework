@@ -14,7 +14,10 @@ public class Context implements IContext {
     public final ServiceContainer services;
     public final LocalStorage localStorage;
 
-    public Context(LocalStorage localStorage) {
+    public final String hostname;
+
+    public Context(LocalStorage localStorage, String hostname) {
+        this.hostname = hostname;
         this.localStorage = localStorage;
         this.services = new ServiceContainer(this);
     }
@@ -32,6 +35,11 @@ public class Context implements IContext {
     @Override
     public ILogger generateLogger(Class<?> clazz) {
         return getLoggerIntern(clazz);
+    }
+
+    @Override
+    public String getHostname() {
+        return hostname;
     }
 
 

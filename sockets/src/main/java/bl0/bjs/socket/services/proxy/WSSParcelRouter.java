@@ -17,24 +17,18 @@ import static bl0.bjs.socket.C.GSON;
 
 public class WSSParcelRouter extends BJSBaseClass {
 
-    private final Queue<Pair<NamedSocket, WSSParcel>> queue;
+    private final String name;
 
-    public WSSParcelRouter(IContext ctx) {
+    public WSSParcelRouter(IContext ctx, String name) {
         super(ctx);
-        queue = new Queue<>(ctx,this::exec);
-        queue.setMaxBatchSize(1);
+        this.name = name;
     }
 
-    public void pass(WSSParcel parcel, NamedSocket socket) {
-        queue.pass(List.of(Pair.of(socket,parcel)));
-    }
-
-    private void exec(Queue<Pair<NamedSocket, WSSParcel>> queue, List<Pair<NamedSocket, WSSParcel>> list){
-        NamedSocket socket = list.getFirst().first;
-        WSSParcel parcel = list.getFirst().second;
+    public void feed(WSSParcel parcel, NamedSocket socket){
 
         WSSResponse answer = new WSSResponse();
         answer.setTo(parcel.getFrom());
+        answer.setFrom(name);
         answer.setUuid(parcel.getUuid());
 
         try {

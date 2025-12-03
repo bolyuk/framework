@@ -6,6 +6,7 @@ import bl0.bjs.socket.base.IResponseAwaiter;
 import bl0.bjs.socket.core.NamedSocket;
 import bl0.bjs.socket.core.data.WSSParcel;
 import bl0.bjs.socket.services.IWebSocketService;
+import lombok.SneakyThrows;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -23,6 +24,7 @@ public class WSSProxy {
                 (proxy, method, args) -> proxyMethod(method, args, socket, iface, l, waiter, name));
     }
 
+    @SneakyThrows
     private static Object proxyMethod(Method method, Object[] args, NamedSocket socket, Class<?> iface, ILogger l, IResponseAwaiter waiter, String name) {
         if(socket == null || socket.isClosed())
             throw new IllegalStateException("Socket is closed!");
@@ -48,13 +50,16 @@ public class WSSProxy {
         parcel.setParams(params);
         parcel.setParamTypes(paramTypes);
 
-        l.log(iface.getSimpleName()+"."+method.getName()+" ip: "+socket.getAdress());
+        l.log(iface.getSimpleName()+"."+method.getName()+" ip: "+socket.getAddress());
 
         socket.send(GSON.toJson(parcel));
         if (method.getReturnType() == Void.TYPE) {
             return null;
         } else {
-            return waiter.await(parcel.getUuid());
+            Object data = waiter.await(parcel.getUuid());
+            if(data instanceof Throwable t)
+                throw t;
+            return data;
         }
     }
 }

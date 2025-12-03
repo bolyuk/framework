@@ -4,6 +4,7 @@ import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.socket.base.IResponseAwaiter;
+import bl0.bjs.socket.core.data.WSException;
 import bl0.bjs.socket.core.data.WSSResponse;
 import com.google.gson.Gson;
 
@@ -48,13 +49,17 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         }
 
         Object value;
-        if(parcel.getType() != null)
+        if(parcel.getParcelType() != null)
             try {
-                value = gson.fromJson(parcel.getData(), Class.forName(parcel.getType()));
+                if(parcel.isSuccess())
+                    value = gson.fromJson(parcel.getData(), Class.forName(parcel.getParcelType()));
+                else
+                    value = new WSException(parcel.getData());
+
                 pair.second = value;
             } catch (ClassNotFoundException e) {
                 pair.second = null;
-                l.err("response class " + parcel.getType()+" was not found");
+                l.err("response class " + parcel.getParcelType()+" was not found");
             }
         pair.first.countDown();
         return true;

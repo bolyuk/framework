@@ -6,11 +6,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Getter @Setter
-public class WSSParcel {
-    private UUID uuid;
-
-    private String from;
-    private String to;
+public class WSSParcel extends WSBaseParcel {
 
     private String path;
     private String method;

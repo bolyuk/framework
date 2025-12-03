@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter @Setter
-public class WSSRegParcel {
+public class WSSRegParcel extends WSBaseParcel {
     String name;
     String[] services;
 }
