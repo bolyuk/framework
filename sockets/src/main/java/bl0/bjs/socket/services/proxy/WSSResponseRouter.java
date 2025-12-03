@@ -4,8 +4,8 @@ import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.socket.base.IResponseAwaiter;
-import bl0.bjs.socket.core.data.WSException;
-import bl0.bjs.socket.core.data.WSSResponse;
+import bl0.bjs.socket.core.data.WSParcel;
+import bl0.bjs.socket.core.payload.WSSResponse;
 import com.google.gson.Gson;
 
 import java.util.UUID;
@@ -42,26 +42,31 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         }
     }
 
-    public boolean pass(WSSResponse parcel) {
-        Pair<CountDownLatch, Object> pair = awaiter.get(parcel.getUuid());
-        if (pair == null) {
-            return false;
-        }
-
-        Object value;
-        if(parcel.getParcelType() != null)
-            try {
-                if(parcel.isSuccess())
-                    value = gson.fromJson(parcel.getData(), Class.forName(parcel.getParcelType()));
-                else
-                    value = new WSException(parcel.getData());
-
-                pair.second = value;
-            } catch (ClassNotFoundException e) {
-                pair.second = null;
-                l.err("response class " + parcel.getParcelType()+" was not found");
+    public boolean pass(WSParcel parcel) {
+        if(parcel.getPayload() instanceof WSSResponse response) {
+            Pair<CountDownLatch, Object> pair = awaiter.get(parcel.getUuid());
+            if (pair == null) {
+                return false;
             }
-        pair.first.countDown();
-        return true;
+
+            Object value;
+            if (response.getType() != null)
+                try {
+                    if (response.isSuccess())
+                        value = gson.fromJson(response.getData(), Class.forName(response.getType()));
+                    else
+                        value = new WSException(response.getData());
+
+                    pair.second = value;
+                } catch (ClassNotFoundException e) {
+                    pair.second = null;
+                    l.err("response class [" + response.getType() + "] was not found");
+                }
+            pair.first.countDown();
+            return true;
+        } else {
+            l.err("wrong payload ["+parcel.getPayloadType()+"] in WSSResponseRouter");
+            return  false;
+        }
     }
 }

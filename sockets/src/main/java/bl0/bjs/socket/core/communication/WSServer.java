@@ -6,19 +6,16 @@ import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
-import bl0.bjs.socket.core.data.WSBaseParcel;
-import bl0.bjs.socket.core.data.WSSRegParcel;
+import bl0.bjs.socket.core.data.WSParcel;
+import bl0.bjs.socket.core.payload.auth.WSSAuth;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
-import bl0.bjs.socket.core.NamedSocket;
+import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.core.data.WSSParcel;
+import bl0.bjs.socket.core.payload.WSSRequest;
 import bl0.bjs.socket.services.proxy.WSSProxy;
-import bl0.bjs.socket.core.data.WSSResponse;
 import bl0.bjs.socket.utils.ParcelErrors;
 import bl0.bjs.socket.utils.ParcelUtils;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -27,8 +24,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static bl0.bjs.socket.C.GSON;
 
 public class WSServer extends WebSocketServer implements IWSBase {
     protected final ILogger l;
@@ -39,7 +34,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     protected final ConcurrentHashMap<NamedSocket, List<String>> clients = new ConcurrentHashMap<>();
 
-    protected final QueuePool<String, Pair<NamedSocket, WSBaseParcel>, ParcelQueue> queuePool;
+    protected final QueuePool<String, Pair<NamedSocket, WSParcel>, ParcelQueue> queuePool;
 
     public WSServer(IContext context, InetSocketAddress address) {
         super(address);
@@ -97,7 +92,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
         if(client == null)
             client = new NamedSocket(ctx, webSocket, null, false);
 
-        WSBaseParcel bParcel = ParcelUtils.tryParse(json, client, l, NamedSocket.SERVER);
+        WSParcel bParcel = ParcelUtils.tryParse(json, client, l, NamedSocket.SERVER);
 
         if(bParcel == null)
             return;
@@ -111,13 +106,13 @@ public class WSServer extends WebSocketServer implements IWSBase {
         if(bParcel.getTo() != null && bParcel.getTo().equals(NamedSocket.SERVER)){
             queuePool.pass(bParcel.getFrom(), Pair.of(client, bParcel));
         } else {
-            String path = bParcel instanceof WSSParcel ? ((WSSParcel) bParcel).getPath() : null;
+            String path = bParcel.getPayload() instanceof WSSRequest r? r.getPath() : null;
             NamedSocket socket = find(path, bParcel.getTo());
 
             if(socket == null){
                 ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.RECIPIENT_NOT_FOUND,json, client, l, NamedSocket.SERVER);
             } else {
-                socket.send(json);
+                socket.send(bParcel);
                 l.log("parcel rerouted from:"+bParcel.getFrom()+" to:"+bParcel.getTo());
             }
         }
@@ -133,7 +128,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
         l.log("Server started");
     }
 
-    private NamedSocket find(String clazz, String name) {
+    protected NamedSocket find(String clazz, String name) {
         if(clients.isEmpty())
             return null;
 
@@ -150,10 +145,10 @@ public class WSServer extends WebSocketServer implements IWSBase {
         return null;
     }
 
-    private boolean authGateway(WSBaseParcel parcel, NamedSocket client, ILogger l) {
+    private boolean authGateway(WSParcel parcel, NamedSocket client, ILogger l) {
         boolean isRegParcel = false;
-        if(parcel instanceof WSSRegParcel regParcel)
-            if(client.isAuthorized() || regParcel.getName() == null || parcel.getTo() == null || !parcel.getTo().equals(NamedSocket.SERVER)){
+        if(parcel.getPayload() instanceof WSSAuth authPayload)
+            if(client.isAuthorized() || authPayload.getName() == null || parcel.getTo() == null || !parcel.getTo().equals(NamedSocket.SERVER)){
                 ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.AUTH_WRONG_DATA, null, client, l, NamedSocket.SERVER);
                 return false;
             } else
@@ -167,9 +162,9 @@ public class WSServer extends WebSocketServer implements IWSBase {
         return true;
     }
 
-    private boolean registerIfNeeded(NamedSocket socket, WSBaseParcel parcel) {
-        if(parcel instanceof WSSRegParcel regParcel){
-            socket = new NamedSocket(ctx, socket.getSocket(), regParcel.getName(), true);
+    private boolean registerIfNeeded(NamedSocket socket, WSParcel parcel) {
+        if(parcel.getPayload() instanceof WSSAuth authPayload){
+            socket = new NamedSocket(ctx, socket.getSocket(), authPayload.getName(), true);
             clients.put(socket, new ArrayList<>());
             l.log("client ["+socket.getName()+"] registered");
             return true;
@@ -177,7 +172,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
         return false;
     }
 
-    private NamedSocket find(WebSocket socket) {
+    protected NamedSocket find(WebSocket socket) {
         if(clients.isEmpty())
             return null;
         for (var data : clients.keySet()) {

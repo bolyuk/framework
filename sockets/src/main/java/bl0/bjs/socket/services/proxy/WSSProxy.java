@@ -3,8 +3,9 @@ package bl0.bjs.socket.services.proxy;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IResponseAwaiter;
-import bl0.bjs.socket.core.NamedSocket;
-import bl0.bjs.socket.core.data.WSSParcel;
+import bl0.bjs.socket.core.data.NamedSocket;
+import bl0.bjs.socket.core.data.WSParcel;
+import bl0.bjs.socket.core.payload.WSSRequest;
 import bl0.bjs.socket.services.IWebSocketService;
 import lombok.SneakyThrows;
 
@@ -30,13 +31,18 @@ public class WSSProxy {
             throw new IllegalStateException("Socket is closed!");
 
         UUID uuid = UUID.randomUUID();
-        WSSParcel parcel = new WSSParcel();
+        WSParcel parcel = new WSParcel();
 
-        parcel.setMethod(method.getName());
+
         parcel.setUuid(uuid);
         parcel.setFrom(name);
         parcel.setTo(socket.getName());
-        parcel.setPath(iface.getName());
+
+        WSSRequest request = new WSSRequest();
+        parcel.setPayload(request);
+
+        request.setPath(iface.getName());
+        request.setMethod(method.getName());
 
         int len = args == null ? 0 : args.length;
         String[] paramTypes = new String[len];
@@ -47,12 +53,12 @@ public class WSSProxy {
             paramTypes[i] = method.getParameterTypes()[i].getName();
         }
 
-        parcel.setParams(params);
-        parcel.setParamTypes(paramTypes);
+        request.setParams(params);
+        request.setParamTypes(paramTypes);
 
         l.log(iface.getSimpleName()+"."+method.getName()+" ip: "+socket.getAddress());
 
-        socket.send(GSON.toJson(parcel));
+        socket.send(parcel);
         if (method.getReturnType() == Void.TYPE) {
             return null;
         } else {

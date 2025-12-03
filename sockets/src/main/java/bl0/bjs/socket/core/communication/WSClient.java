@@ -7,12 +7,11 @@ import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
-import bl0.bjs.socket.core.data.WSSRegParcel;
-import bl0.bjs.socket.utils.ParcelErrors;
-import bl0.bjs.socket.core.data.WSBaseParcel;
+import bl0.bjs.socket.core.data.WSParcel;
+import bl0.bjs.socket.core.payload.auth.WSSAuth;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
-import bl0.bjs.socket.core.NamedSocket;
+import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
 import bl0.bjs.socket.services.proxy.WSSProxy;
 import bl0.bjs.socket.utils.ParcelUtils;
@@ -22,8 +21,6 @@ import org.java_websocket.handshake.ServerHandshake;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
-
-import static bl0.bjs.socket.C.GSON;
 
 public class WSClient extends WebSocketClient implements IWSBase {
     protected final ILogger l;
@@ -35,7 +32,7 @@ public class WSClient extends WebSocketClient implements IWSBase {
     protected final String name;
     protected NamedSocket socket;
 
-    protected final QueuePool<String, Pair<NamedSocket, WSBaseParcel>, ParcelQueue> queuePool;
+    protected final QueuePool<String, Pair<NamedSocket, WSParcel>, ParcelQueue> queuePool;
 
     public WSClient(IContext context, URI serverUri, String name) {
         super(serverUri);
@@ -68,7 +65,7 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     @Override
     public void onMessage(String s) {
-        WSBaseParcel bParcel = ParcelUtils.tryParse(s, socket, l, name);
+        WSParcel bParcel = ParcelUtils.tryParse(s, socket, l, name);
 
         if(bParcel == null)
             return;
@@ -104,12 +101,21 @@ public class WSClient extends WebSocketClient implements IWSBase {
     }
 
     private void authorize(){
-        WSSRegParcel regParcel = new  WSSRegParcel();
-        regParcel.setFrom(name);
-        regParcel.setTo(NamedSocket.SERVER);
-        regParcel.setName(name);
-        regParcel.setUuid(UUID.randomUUID());
-        socket.send(GSON.toJson(regParcel));
+        WSParcel parcel = genDefaultParcel(NamedSocket.SERVER);
+
+        WSSAuth authPayload = new WSSAuth();
+        authPayload.setName(name);
+        parcel.setPayload(authPayload);
+
+        socket.send(parcel);
+    }
+
+    private WSParcel genDefaultParcel(String to){
+        WSParcel parcel = new WSParcel();
+        parcel.setFrom(name);
+        parcel.setTo(NamedSocket.SERVER);
+        parcel.setUuid(UUID.randomUUID());
+        return parcel;
     }
 
     @Override

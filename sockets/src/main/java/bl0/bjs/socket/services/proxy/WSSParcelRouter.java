@@ -2,16 +2,13 @@ package bl0.bjs.socket.services.proxy;
 
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.async.queue.Queue;
-import bl0.bjs.common.core.tuple.Pair;
-import bl0.bjs.socket.core.NamedSocket;
+import bl0.bjs.socket.core.data.NamedSocket;
+import bl0.bjs.socket.core.data.WSParcel;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.core.data.WSSResponse;
-import bl0.bjs.socket.core.data.WSSParcel;
-import org.java_websocket.WebSocket;
+import bl0.bjs.socket.core.payload.WSSResponse;
+import bl0.bjs.socket.core.payload.WSSRequest;
 
 import java.lang.reflect.Method;
-import java.util.List;
 
 import static bl0.bjs.socket.C.GSON;
 
@@ -24,43 +21,50 @@ public class WSSParcelRouter extends BJSBaseClass {
         this.name = name;
     }
 
-    public void feed(WSSParcel parcel, NamedSocket socket){
+    public void feed(WSParcel parcel, NamedSocket socket){
+        if(parcel.getPayload() instanceof WSSRequest request){
 
-        WSSResponse answer = new WSSResponse();
-        answer.setTo(parcel.getFrom());
-        answer.setFrom(name);
-        answer.setUuid(parcel.getUuid());
+        WSParcel answerParcel = new WSParcel();
+        WSSResponse answerPayload = new WSSResponse();
+        answerParcel.setPayload(answerPayload);
+        answerParcel.setTo(parcel.getFrom());
+        answerParcel.setFrom(name);
+        answerParcel.setUuid(parcel.getUuid());
 
         try {
-            Class<?> clazz = Class.forName(parcel.getPath());
+            Class<?> clazz = Class.forName(request.getPath());
 
             if (!IWebSocketService.class.isAssignableFrom(clazz))
-                throw new ClassCastException(parcel.getPath()+" is not assignable to IWebSocketService");
+                throw new ClassCastException(request.getPath()+" is not assignable to IWebSocketService");
 
             Object service = ctx.getServiceContainer().getService((Class<? extends IWebSocketService>) clazz);
 
             if(service == null)
-                throw new NullPointerException(parcel.getPath()+" does not exist");
+                throw new NullPointerException(request.getPath()+" does not exist");
 
 
-            Class<?>[] paramTypes = resolveParamTypes(parcel.getParamTypes());
-            Object[] params = resolveParams(parcel.getParams(),  paramTypes);
+            Class<?>[] paramTypes = resolveParamTypes(request.getParamTypes());
+            Object[] params = resolveParams(request.getParams(),  paramTypes);
 
-            Method method = clazz.getMethod(parcel.getMethod(), paramTypes);
+            Method method = clazz.getMethod(request.getMethod(), paramTypes);
 
-            answer.setData(GSON.toJson(method.invoke(service,params)));
-            answer.setType(method.getReturnType().getName());
+            answerPayload.setData(GSON.toJson(method.invoke(service,params)));
+            answerPayload.setType(method.getReturnType().getName());
+            answerPayload.setSuccess(true);
 
             if (method.getReturnType() != Void.TYPE) {
-                socket.send(GSON.toJson(answer));
+                socket.send(answerParcel);
             }
-            answer.setSuccess(true);
         } catch (Exception e){
             l.err(e);
-            answer.setSuccess(false);
-            answer.setData(GSON.toJson(e.getMessage()));
-            answer.setType(String.class.getName());
-            socket.send(GSON.toJson(answer));
+            answerPayload.setSuccess(false);
+            answerPayload.setData(GSON.toJson(e.getMessage()));
+            answerPayload.setType(String.class.getName());
+            socket.send(answerParcel);
+        }
+
+        } else {
+            l.err("wrong payload ["+parcel.getPayloadType()+"] in WSSParcelRouter");
         }
     }
 

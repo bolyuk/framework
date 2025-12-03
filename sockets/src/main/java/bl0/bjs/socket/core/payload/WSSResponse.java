@@ -1,12 +1,10 @@
-package bl0.bjs.socket.core.data;
+package bl0.bjs.socket.core.payload;
 
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.UUID;
-
 @Getter @Setter
-public class WSSResponse extends WSBaseParcel {
+public class WSSResponse implements IPayload {
     String data;
     String type;
 

@@ -2,7 +2,7 @@ package bl0.bjs.socket.utils;
 
 public class ParcelErrors {
     public final static String INVALID_DATA = "invalid data";
-    public final static String INVALID_TYPE = "invalid type";
+    public final static String INVALID_TYPE = "invalid payload type";
 
     public final static String INVALID_RECIPIENT = "invalid recipient";
 

@@ -1,9 +1,10 @@
 package bl0.bjs.socket.utils;
 
 import bl0.bjs.logging.ILogger;
-import bl0.bjs.socket.core.NamedSocket;
-import bl0.bjs.socket.core.data.WSBaseParcel;
-import bl0.bjs.socket.core.data.WSSResponse;
+import bl0.bjs.socket.core.data.NamedSocket;
+import bl0.bjs.socket.core.data.WSParcel;
+import bl0.bjs.socket.core.payload.IPayload;
+import bl0.bjs.socket.core.payload.WSSResponse;
 
 import java.util.UUID;
 
@@ -14,8 +15,8 @@ public class ParcelUtils {
         return GSON.fromJson(json, classOfT);
     }
 
-    public static <T extends WSBaseParcel> T tryParse(String json, NamedSocket socket, ILogger l, String name) {
-        WSBaseParcel bParcel = GSON.fromJson(json, WSBaseParcel.class);
+    public static WSParcel tryParse(String json, NamedSocket socket, ILogger l, String name) {
+        WSParcel bParcel = GSON.fromJson(json, WSParcel.class);
 
         if(bParcel == null){
             sendParcelErrorBackAndLog(ParcelErrors.INVALID_DATA, json, socket, l, name);
@@ -27,7 +28,7 @@ public class ParcelUtils {
             return null;
         }
 
-        if(bParcel.getParcelType() == null){
+        if(bParcel.getPayloadType() == null){
             sendParcelErrorBackAndLog(ParcelErrors.INVALID_TYPE, json, socket, l, name);
             return null;
         }
@@ -38,25 +39,29 @@ public class ParcelUtils {
         }
 
         try {
-            Class<?> clazz = Class.forName(bParcel.getParcelType());
-            return (T) GSON.fromJson(json, clazz);
+            Class<?> clazz = Class.forName(bParcel.getPayloadType());
+            bParcel.setPayload((IPayload)GSON.fromJson(bParcel.getPayloadString(), clazz));
+            return bParcel;
         } catch (ClassNotFoundException e){
-            sendParcelErrorBackAndLog("parcel type was not found ["+bParcel.getParcelType()+"]", null, socket, l, name);
+            sendParcelErrorBackAndLog("payload type was not found ["+bParcel.getPayloadType()+"]", null, socket, l, name);
         }
         return null;
     }
 
     public static void sendParcelErrorBackAndLog(String error, String extra_data, NamedSocket socket, ILogger l, String name){
-        WSSResponse  response = new WSSResponse();
-        response.setSuccess(false);
-        response.setData(error);
-        response.setTo(socket.getName());
-        response.setFrom(name);
-        response.setUuid(UUID.randomUUID());
-        response.setType(String.class.toString());
-        l.warn("Parcel Error: "+error, extra_data);
+        WSParcel parcel = new WSParcel();
+        parcel.setTo(socket.getName());
+        parcel.setFrom(name);
+        parcel.setUuid(UUID.randomUUID());
 
-        if(socket != null)
-            socket.send(GSON.toJson(response));
+        WSSResponse payload = new WSSResponse();
+
+        payload.setSuccess(false);
+        payload.setData(error);
+        payload.setType(String.class.toString());
+
+        parcel.setPayload(payload);
+        l.warn("Parcel Error: "+error, extra_data);
+        socket.send(parcel);
     }
 }

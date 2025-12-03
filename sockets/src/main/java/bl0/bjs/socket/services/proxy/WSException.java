@@ -1,4 +1,4 @@
-package bl0.bjs.socket.core.data;
+package bl0.bjs.socket.services.proxy;
 
 public class WSException extends RuntimeException {
     public WSException(String data) {
