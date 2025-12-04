@@ -44,7 +44,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
         this.responseRouter = new WSSResponseRouter(context);
         this.parcelRouter = new WSSParcelRouter(context, NamedSocket.SERVER);
 
-        this.queuePool = new QueuePool<>(ctx, (_) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
+        this.queuePool = new QueuePool<>(ctx, (s) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
         this.queuePool.setMaxBatchSize(1);
     }
 

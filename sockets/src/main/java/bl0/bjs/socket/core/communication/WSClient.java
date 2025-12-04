@@ -44,7 +44,7 @@ public class WSClient extends WebSocketClient implements IWSBase {
         this.parcelRouter = new WSSParcelRouter(context, name);
 
 
-        this.queuePool = new QueuePool<>(ctx, (_) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
+        this.queuePool = new QueuePool<>(ctx, (s) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
         this.queuePool.setMaxBatchSize(1);
     }
 
