@@ -18,6 +18,7 @@
         <module>services</module>
         <module>async</module>
         <module>boot</module>
+        <module>reflection</module>
     </modules>
 
     <properties>

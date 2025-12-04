@@ -16,7 +16,6 @@ public class FilesUtils {
         File, Folder, All
     }
 
-    @SneakyThrows
     public static String getJarLocation(Class<?> object) {
         try {
             var jarPath = new File(object

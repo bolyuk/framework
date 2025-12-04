@@ -1,4 +1,4 @@
-package bl0.bjs.framework.utils;
+package bl0.bjs.reflection.utils;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;

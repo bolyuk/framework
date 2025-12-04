@@ -6,7 +6,7 @@ import bl0.bjs.services.interfaces.IService;
 import bl0.bjs.logging.containers.ILogBatch;
 import bl0.bjs.services.events.ServiceEvent;
 import bl0.bjs.framework.logging.DefaultLogger;
-import bl0.bjs.framework.utils.ClassUtils;
+import bl0.bjs.reflection.utils.ClassUtils;
 
 import java.util.concurrent.ConcurrentHashMap;
 
