@@ -7,7 +7,7 @@
     <groupId>bl0.bjs.framework</groupId>
     <artifactId>framework</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
     <modules>
         <module>db</module>
         <module>sockets</module>
