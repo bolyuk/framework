@@ -25,5 +25,14 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <url>https://maven.bolyuk.org/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <url>https://maven.bolyuk.org/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>
