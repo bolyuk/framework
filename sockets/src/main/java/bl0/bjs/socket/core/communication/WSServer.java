@@ -3,16 +3,20 @@ package bl0.bjs.socket.core.communication;
 import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
+import bl0.bjs.eventbus.IEventBusController;
+import bl0.bjs.eventbus.IEventBusNode;
 import bl0.bjs.logging.ILogger;
+import bl0.bjs.socket.base.IBroadcastSink;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
-import bl0.bjs.socket.core.data.WSParcel;
-import bl0.bjs.socket.core.payload.auth.WSSAuth;
+import bl0.bjs.socket.core.parcel.WSParcel;
+import bl0.bjs.socket.core.parcel.payload.WSSEvent;
+import bl0.bjs.socket.core.parcel.payload.auth.WSSAuth;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.core.payload.WSSRequest;
+import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 import bl0.bjs.socket.services.proxy.WSSProxy;
 import bl0.bjs.socket.utils.ParcelErrors;
 import bl0.bjs.socket.utils.ParcelUtils;
@@ -25,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WSServer extends WebSocketServer implements IWSBase {
+public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink {
     protected final ILogger l;
     protected final IContext ctx;
 
@@ -74,6 +78,11 @@ public class WSServer extends WebSocketServer implements IWSBase {
     }
 
     @Override
+    public String getName() {
+        return NamedSocket.SERVER;
+    }
+
+    @Override
     public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
     }
 
@@ -106,14 +115,17 @@ public class WSServer extends WebSocketServer implements IWSBase {
         if(bParcel.getTo() != null && bParcel.getTo().equals(NamedSocket.SERVER)){
             queuePool.pass(bParcel.getFrom(), Pair.of(client, bParcel));
         } else {
-            String path = bParcel.getPayload() instanceof WSSRequest r? r.getPath() : null;
-            NamedSocket socket = find(path, bParcel.getTo());
-
-            if(socket == null){
-                ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.RECIPIENT_NOT_FOUND,json, client, l, NamedSocket.SERVER);
+            if(bParcel.getPayload() instanceof WSSEvent e){
+                broadcast(e);
             } else {
-                socket.send(bParcel);
-                l.log("parcel rerouted from:"+bParcel.getFrom()+" to:"+bParcel.getTo());
+                String path = bParcel.getPayload() instanceof WSSRequest r ? r.getPath() : null;
+                NamedSocket socket = find(path, bParcel.getTo());
+                if (socket == null)
+                    ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.RECIPIENT_NOT_FOUND, json, client, l, NamedSocket.SERVER);
+                else {
+                    socket.send(bParcel);
+                    l.log("parcel rerouted from:" + bParcel.getFrom() + " to:" + socket.getName());
+                }
             }
         }
     }
@@ -143,6 +155,18 @@ public class WSServer extends WebSocketServer implements IWSBase {
                 return data.getKey();
         }
         return null;
+    }
+
+    protected List<NamedSocket> findAll(String clazz) {
+        ArrayList<NamedSocket> result = new ArrayList<>();
+        if(clients.isEmpty())
+            return result;
+
+        for (var data : clients.entrySet()) {
+            if(clazz != null && data.getValue().contains(clazz))
+                result.add(data.getKey());
+        }
+        return result;
     }
 
     private boolean authGateway(WSParcel parcel, NamedSocket client, ILogger l) {
@@ -180,5 +204,15 @@ public class WSServer extends WebSocketServer implements IWSBase {
                 return data;
         }
         return null;
+    }
+
+    @Override
+    public <T extends IEventBusNode<R>, R> IEventBusController<T, R> getController(Class<T> clazz) {
+        return null;
+    }
+
+    @Override
+    public void broadcast(WSSEvent event) {
+
     }
 }

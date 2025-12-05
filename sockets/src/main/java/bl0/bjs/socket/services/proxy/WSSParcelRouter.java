@@ -3,10 +3,10 @@ package bl0.bjs.socket.services.proxy;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.socket.core.data.NamedSocket;
-import bl0.bjs.socket.core.data.WSParcel;
+import bl0.bjs.socket.core.parcel.WSParcel;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.core.payload.WSSResponse;
-import bl0.bjs.socket.core.payload.WSSRequest;
+import bl0.bjs.socket.core.parcel.payload.WSSResponse;
+import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 
 import java.lang.reflect.Method;
 

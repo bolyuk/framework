@@ -1,6 +1,6 @@
-package bl0.bjs.socket.core.payload.auth;
+package bl0.bjs.socket.core.parcel.payload.auth;
 
-import bl0.bjs.socket.core.payload.IPayload;
+import bl0.bjs.socket.core.parcel.payload.IPayload;
 import lombok.Getter;
 import lombok.Setter;
 

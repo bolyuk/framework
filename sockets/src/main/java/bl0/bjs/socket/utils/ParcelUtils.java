@@ -2,9 +2,9 @@ package bl0.bjs.socket.utils;
 
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.core.data.NamedSocket;
-import bl0.bjs.socket.core.data.WSParcel;
-import bl0.bjs.socket.core.payload.IPayload;
-import bl0.bjs.socket.core.payload.WSSResponse;
+import bl0.bjs.socket.core.parcel.WSParcel;
+import bl0.bjs.socket.core.parcel.payload.IPayload;
+import bl0.bjs.socket.core.parcel.payload.WSSResponse;
 
 import java.util.UUID;
 

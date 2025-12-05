@@ -4,8 +4,8 @@ import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.socket.base.IResponseAwaiter;
-import bl0.bjs.socket.core.data.WSParcel;
-import bl0.bjs.socket.core.payload.WSSResponse;
+import bl0.bjs.socket.core.parcel.WSParcel;
+import bl0.bjs.socket.core.parcel.payload.WSSResponse;
 import com.google.gson.Gson;
 
 import java.util.UUID;

@@ -4,11 +4,14 @@ import bl0.bjs.async.AsyncExecutor;
 import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
+import bl0.bjs.eventbus.IEventBusController;
+import bl0.bjs.eventbus.IEventBusNode;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
-import bl0.bjs.socket.core.data.WSParcel;
-import bl0.bjs.socket.core.payload.auth.WSSAuth;
+import bl0.bjs.socket.core.parcel.WSParcel;
+import bl0.bjs.socket.core.parcel.payload.WSSEvent;
+import bl0.bjs.socket.core.parcel.payload.auth.WSSAuth;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.core.data.NamedSocket;
@@ -61,6 +64,17 @@ public class WSClient extends WebSocketClient implements IWSBase {
     @Override //TODO
     public <T extends IWebSocketService> List<T> getAll(Class<T> service) {
         return List.of();
+    }
+
+    @Override
+    public <T extends IEventBusNode<T>> void connectEventBus(Class<T> dataClass) {
+      IEventBusController<?,?> controller = ctx.getEventBus().getController(dataClass);
+      controller.
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override
@@ -121,5 +135,11 @@ public class WSClient extends WebSocketClient implements IWSBase {
     @Override
     public void onError(Exception e) {
         l.err(e);
+    }
+
+    private <T extends IEventBusNode<T>> void broadcast(T data) {
+        WSParcel parcel = genDefaultParcel(NamedSocket.SERVER);
+        parcel.setPayload(new WSSEvent(data));
+        socket.send(parcel);
     }
 }

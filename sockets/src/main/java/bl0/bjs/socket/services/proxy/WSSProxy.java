@@ -4,8 +4,8 @@ import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IResponseAwaiter;
 import bl0.bjs.socket.core.data.NamedSocket;
-import bl0.bjs.socket.core.data.WSParcel;
-import bl0.bjs.socket.core.payload.WSSRequest;
+import bl0.bjs.socket.core.parcel.WSParcel;
+import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 import bl0.bjs.socket.services.IWebSocketService;
 import lombok.SneakyThrows;
 

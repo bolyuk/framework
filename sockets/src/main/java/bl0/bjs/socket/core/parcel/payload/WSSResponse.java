@@ -1,4 +1,4 @@
-package bl0.bjs.socket.core.payload;
+package bl0.bjs.socket.core.parcel.payload;
 
 import lombok.Getter;
 import lombok.Setter;

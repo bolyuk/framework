@@ -2,6 +2,7 @@ package bl0.bjs.socket.core.data;
 
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
+import bl0.bjs.socket.core.parcel.WSParcel;
 import lombok.Getter;
 import org.java_websocket.WebSocket;
 

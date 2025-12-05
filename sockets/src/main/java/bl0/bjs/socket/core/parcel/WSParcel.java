@@ -1,7 +1,7 @@
-package bl0.bjs.socket.core.data;
+package bl0.bjs.socket.core.parcel;
 
-import bl0.bjs.socket.core.payload.IPayload;
-import bl0.bjs.socket.core.payload.auth.WSCredentials;
+import bl0.bjs.socket.core.parcel.payload.IPayload;
+import bl0.bjs.socket.core.parcel.payload.auth.WSCredentials;
 import lombok.Getter;
 import lombok.Setter;
 
