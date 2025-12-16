@@ -1,13 +1,15 @@
 package bl0.bjs.async;
 
-import java.util.HashMap;
+import bl0.bjs.common.async.control.IAsync;
+
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class AsyncExecutor {
-    private static final HashMap<IAsync, Future> data = new HashMap<>();
-    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
+    private static final ConcurrentHashMap<IAsync, Future> data = new ConcurrentHashMap<>();
+    private static final ExecutorService executor = Executors.newCachedThreadPool();
 
     /// <summary>
     /// register and start IAsync

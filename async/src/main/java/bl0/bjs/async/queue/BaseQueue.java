@@ -1,5 +1,6 @@
 package bl0.bjs.async.queue;
 
+import bl0.bjs.common.async.queue.IQueue;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.async.AsyncExecutor;
@@ -12,12 +13,12 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-public class Queue<T> extends BJSBaseClass {
-    private final ArrayList<T> data = new ArrayList<>();
-    private final BiConsumer<Queue<T>, List<T>> queueFunction;
-    private final Object lock = new Object();
-    private boolean processing = false;
-    private int maxBatchSize = -1;
+public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
+    protected final ArrayList<T> data = new ArrayList<>();
+    protected final BiConsumer<BaseQueue<T>, T> queueFunction;
+    protected final Object lock = new Object();
+    protected boolean processing = false;
+
 
     // --- delay support ---
     private static final ScheduledExecutorService DELAY_EXECUTOR =
@@ -30,16 +31,11 @@ public class Queue<T> extends BJSBaseClass {
     private long startDelayMillis = 0;
     private ScheduledFuture<?> delayedStartFuture;
 
-    public Queue(IContext ctx, BiConsumer<Queue<T>, List<T>> queueFunction) {
+    public BaseQueue(IContext ctx, BiConsumer<BaseQueue<T>, T> queueFunction) {
         super(ctx);
         this.queueFunction = queueFunction;
     }
 
-    public void setMaxBatchSize(int value) {
-        synchronized (lock) {
-            this.maxBatchSize = value;
-        }
-    }
 
     public void setStartDelayMillis(long delayMillis) {
         synchronized (lock) {
@@ -59,12 +55,6 @@ public class Queue<T> extends BJSBaseClass {
                 AsyncExecutor.register(this::internalWork);
             } else
                 scheduleDelayedStart();
-        }
-    }
-
-    public boolean isEmpty(){
-        synchronized (lock) {
-            return data.isEmpty();
         }
     }
 
@@ -111,7 +101,7 @@ public class Queue<T> extends BJSBaseClass {
         }
     }
 
-    protected void accept(Queue<T> q, List<T> batch){
+    protected void accept(BaseQueue<T> q, List<T> batch){
         queueFunction.accept(q, batch);
     }
 }

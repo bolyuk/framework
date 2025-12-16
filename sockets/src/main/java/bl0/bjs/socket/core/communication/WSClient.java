@@ -66,10 +66,9 @@ public class WSClient extends WebSocketClient implements IWSBase {
         return List.of();
     }
 
-    @Override
+    @Override //TODO
     public <T extends IEventBusNode<T>> void connectEventBus(Class<T> dataClass) {
       IEventBusController<?,?> controller = ctx.getEventBus().getController(dataClass);
-      controller.
     }
 
     @Override
@@ -122,12 +121,13 @@ public class WSClient extends WebSocketClient implements IWSBase {
         parcel.setPayload(authPayload);
 
         socket.send(parcel);
+        responseRouter.await(parcel.getUuid());
     }
 
     private WSParcel genDefaultParcel(String to){
         WSParcel parcel = new WSParcel();
         parcel.setFrom(name);
-        parcel.setTo(NamedSocket.SERVER);
+        parcel.setTo(to);
         parcel.setUuid(UUID.randomUUID());
         return parcel;
     }

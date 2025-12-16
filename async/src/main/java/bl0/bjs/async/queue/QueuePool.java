@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 
-public class QueuePool<ID, R, T extends Queue<R>> extends BJSBaseClass {
+public class QueuePool<ID, R, T extends BaseQueue<R>> extends BJSBaseClass {
     private final HashMap<ID, T> queuePool = new HashMap<>();
 
     private final Function<ID, T> queueFactory;

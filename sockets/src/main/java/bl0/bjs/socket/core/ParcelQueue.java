@@ -1,6 +1,6 @@
 package bl0.bjs.socket.core;
 
-import bl0.bjs.async.queue.Queue;
+import bl0.bjs.async.queue.BaseQueue;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.socket.core.data.NamedSocket;
@@ -13,23 +13,27 @@ import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-public class ParcelQueue extends Queue<Pair<NamedSocket, WSParcel>> {
+public class ParcelQueue extends BaseQueue<Pair<NamedSocket, WSParcel>> {
     public final WSSParcelRouter parcelRouter;
     public final WSSResponseRouter responseRouter;
-    public ParcelQueue(WSSParcelRouter parcelRouter, WSSResponseRouter responseRouter, IContext ctx, BiConsumer<Queue<Pair<NamedSocket, WSParcel>>, List<Pair<NamedSocket, WSParcel>>> queueFunction) {
+    public ParcelQueue(WSSParcelRouter parcelRouter, WSSResponseRouter responseRouter, IContext ctx, BiConsumer<BaseQueue<Pair<NamedSocket, WSParcel>>, List<Pair<NamedSocket, WSParcel>>> queueFunction) {
         super(ctx, queueFunction);
         this.parcelRouter = parcelRouter;
         this.responseRouter = responseRouter;
     }
 
-    public static void QueueWorker(Queue<Pair<NamedSocket, WSParcel>> q, List<Pair<NamedSocket, WSParcel>> data){
+    public static void QueueWorker(BaseQueue<Pair<NamedSocket, WSParcel>> q, List<Pair<NamedSocket, WSParcel>> data){
         ParcelQueue queue = (ParcelQueue) q;
         NamedSocket socket = data.getFirst().first;
         WSParcel parcel = data.getFirst().second;
 
         if(parcel.getPayload().getClass().equals(WSSRequest.class))
                 queue.parcelRouter.feed(parcel, socket);
-        else if(parcel.getPayload().getClass().equals(WSSResponse.class))
-                queue.responseRouter.pass(parcel);
+        else if(parcel.getPayload() instanceof WSSResponse response)
+
+                if(!queue.responseRouter.pass(parcel) && !response.isSuccess()){
+                    // unexpected error was returned.
+                    queue.l.err("response error: "+response.getData());
+                }
     }
 }

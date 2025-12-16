@@ -1,12 +1,11 @@
 package bl0.bjs.socket.core.communication;
 
+import bl0.bjs.async.queue.BaseQueue;
 import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
-import bl0.bjs.eventbus.IEventBusController;
 import bl0.bjs.eventbus.IEventBusNode;
 import bl0.bjs.logging.ILogger;
-import bl0.bjs.socket.base.IBroadcastSink;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
 import bl0.bjs.socket.core.parcel.WSParcel;
@@ -29,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink {
+public class WSServer extends WebSocketServer implements IWSBase {
     protected final ILogger l;
     protected final IContext ctx;
 
@@ -38,6 +37,7 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
 
     protected final ConcurrentHashMap<NamedSocket, List<String>> clients = new ConcurrentHashMap<>();
 
+    protected final BaseQueue<Pair<WebSocket, String>> acceptQueue;
     protected final QueuePool<String, Pair<NamedSocket, WSParcel>, ParcelQueue> queuePool;
 
     public WSServer(IContext context, InetSocketAddress address) {
@@ -50,6 +50,9 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
 
         this.queuePool = new QueuePool<>(ctx, (s) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
         this.queuePool.setMaxBatchSize(1);
+
+        this.acceptQueue = new BaseQueue<>(ctx, this::acceptMessage);
+        this.acceptQueue.setMaxBatchSize(1);
     }
 
     @Override
@@ -62,7 +65,7 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
         return WSSProxy.bind(service, client, ctx, responseRouter, null);
     }
 
-    @Override //TODO
+    @Override
     public <T extends IWebSocketService> T getNamed(Class<T> service, String name) {
         NamedSocket client = find(service.getName(), name);
         if (client == null) {
@@ -75,6 +78,10 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
     @Override //TODO
     public <T extends IWebSocketService> List<T> getAll(Class<T> service) {
         return List.of();
+    }
+
+    @Override //TODO
+    public <T extends IEventBusNode<T>> void connectEventBus(Class<T> dataClass) {
     }
 
     @Override
@@ -97,6 +104,13 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
 
     @Override
     public void onMessage(WebSocket webSocket, String json) {
+        acceptQueue.pass(List.of(Pair.of(webSocket, json)));
+    }
+
+    private void acceptMessage(BaseQueue<Pair<WebSocket, String>> stringQueue, List<Pair<WebSocket, String>> strings) {
+        String json = strings.getFirst().second;
+        WebSocket webSocket = strings.getFirst().first;
+
         NamedSocket client = find(webSocket);
         if(client == null)
             client = new NamedSocket(ctx, webSocket, null, false);
@@ -116,7 +130,7 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
             queuePool.pass(bParcel.getFrom(), Pair.of(client, bParcel));
         } else {
             if(bParcel.getPayload() instanceof WSSEvent e){
-                broadcast(e);
+                //TODO
             } else {
                 String path = bParcel.getPayload() instanceof WSSRequest r ? r.getPath() : null;
                 NamedSocket socket = find(path, bParcel.getTo());
@@ -204,15 +218,5 @@ public class WSServer extends WebSocketServer implements IWSBase, IBroadcastSink
                 return data;
         }
         return null;
-    }
-
-    @Override
-    public <T extends IEventBusNode<R>, R> IEventBusController<T, R> getController(Class<T> clazz) {
-        return null;
-    }
-
-    @Override
-    public void broadcast(WSSEvent event) {
-
     }
 }
