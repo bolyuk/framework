@@ -33,9 +33,9 @@ public class JarLoader {
                             .replace(".class", "");
                     try {
                         Class<?> clazz = loader.loadClass(className);
-                        onLoaded.onEvent(clazz);
+                        onLoaded.invoke(clazz);
                     } catch (Throwable e) {
-                        onFailed.onEvent(Pair.of(className, e));
+                        onFailed.invoke(Pair.of(className, e));
                     }
                 }
             }

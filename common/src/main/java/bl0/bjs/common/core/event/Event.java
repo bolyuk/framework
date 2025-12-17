@@ -2,5 +2,5 @@ package bl0.bjs.common.core.event;
 
 @FunctionalInterface
 public interface Event<G, T> {
-    T onEvent(G data);
+    T invoke(G data);
 }

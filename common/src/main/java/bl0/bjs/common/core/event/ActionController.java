@@ -16,7 +16,7 @@ public class ActionController<T> implements IActionController<T> {
 
     public void invoke(T data) {
         for(Action<T> action : actions) {
-            action.onAction(data);
+            action.invoke(data);
         }
     }
 }

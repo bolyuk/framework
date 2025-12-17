@@ -15,7 +15,7 @@ public class ChainController<T> {
 
     public void invoke(T data) {
         for (var handler : handlers) {
-            if (handler.onEvent(data))
+            if (handler.invoke(data))
                 return;
         }
     }

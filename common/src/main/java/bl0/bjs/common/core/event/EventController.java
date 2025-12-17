@@ -15,7 +15,7 @@ public class EventController<T, G> {
 
     public void invoke(T data) {
         for (var handler : handlers)
-            handler.onEvent(data);
+            handler.invoke(data);
     }
 
     public boolean isEmpty() {
