@@ -1,5 +1,6 @@
 package bl0.bjs.async.queue;
 
+import bl0.bjs.common.async.queue.IQueue;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 
@@ -7,15 +8,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 
-public class QueuePool<ID, R, T extends BaseQueue<R>> extends BJSBaseClass {
+public class QueuePool<ID, R, T extends IQueue<R>> extends BJSBaseClass {
     private final HashMap<ID, T> queuePool = new HashMap<>();
 
     private final Function<ID, T> queueFactory;
     private boolean autoGenerateQueue = true;
-
-    private int batchMaxSize = -1;
-
-    private int startDelayMillis = 0;
 
     public QueuePool(IContext ctx, Function<ID, T> queueFactory) {
         super(ctx);
@@ -24,14 +21,6 @@ public class QueuePool<ID, R, T extends BaseQueue<R>> extends BJSBaseClass {
 
     public void allowAutoGenerateQueue(boolean value){
         this.autoGenerateQueue = value;
-    }
-
-    public void setMaxBatchSize(int value){
-        batchMaxSize = value;
-    }
-
-    public void setStartDelayMillis(int value){
-        startDelayMillis = value;
     }
 
     public void pass(ID id, List<R> values){
@@ -49,8 +38,6 @@ public class QueuePool<ID, R, T extends BaseQueue<R>> extends BJSBaseClass {
 
     private void internalPass(ID id, List<R> values){
         T queue = resolveQueue(id);
-        queue.setMaxBatchSize(batchMaxSize);
-        queue.setStartDelayMillis(startDelayMillis);
         queue.pass(values);
     }
 

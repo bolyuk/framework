@@ -7,18 +7,14 @@ import bl0.bjs.async.AsyncExecutor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
 public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
-    protected final ArrayList<T> data = new ArrayList<>();
+    protected final ConcurrentLinkedDeque<T> data = new ConcurrentLinkedDeque<>();
     protected final BiConsumer<BaseQueue<T>, T> queueFunction;
     protected final Object lock = new Object();
     protected boolean processing = false;
-
 
     // --- delay support ---
     private static final ScheduledExecutorService DELAY_EXECUTOR =
@@ -76,32 +72,19 @@ public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
 
     private void internalWork(){
         while (true) {
-            List<T> batch;
-
-            synchronized (lock) {
-                if (data.isEmpty()) {
-                    processing = false;
-                    return;
-                }
-                if(maxBatchSize == -1){
-                    batch = new ArrayList<>(data);
-                    data.clear();
-                } else {
-                    int batchSize = Math.min(maxBatchSize, data.size());
-                    batch = new ArrayList<>(data.subList(0, batchSize));
-                    data.subList(0, batchSize).clear();
-                }
-
+            if (data.isEmpty()) {
+                processing = false;
+                return;
             }
             try {
-                accept(this, batch);
+                accept(this, data.poll());
             } catch (Exception e) {
                 l.err("Error processing queue: ", e);
             }
         }
     }
 
-    protected void accept(BaseQueue<T> q, List<T> batch){
+    protected void accept(BaseQueue<T> q, T batch){
         queueFunction.accept(q, batch);
     }
 }

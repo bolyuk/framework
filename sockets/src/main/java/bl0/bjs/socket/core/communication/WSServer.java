@@ -52,7 +52,6 @@ public class WSServer extends WebSocketServer implements IWSBase {
         this.queuePool.setMaxBatchSize(1);
 
         this.acceptQueue = new BaseQueue<>(ctx, this::acceptMessage);
-        this.acceptQueue.setMaxBatchSize(1);
     }
 
     @Override
@@ -107,9 +106,9 @@ public class WSServer extends WebSocketServer implements IWSBase {
         acceptQueue.pass(List.of(Pair.of(webSocket, json)));
     }
 
-    private void acceptMessage(BaseQueue<Pair<WebSocket, String>> stringQueue, List<Pair<WebSocket, String>> strings) {
-        String json = strings.getFirst().second;
-        WebSocket webSocket = strings.getFirst().first;
+    private void acceptMessage(BaseQueue<Pair<WebSocket, String>> stringQueue, Pair<WebSocket, String> data) {
+        WebSocket webSocket = data.first;
+        String json = data.second;
 
         NamedSocket client = find(webSocket);
         if(client == null)

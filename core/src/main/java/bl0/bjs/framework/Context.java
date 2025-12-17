@@ -1,5 +1,7 @@
 package bl0.bjs.framework;
 
+import bl0.bjs.async.control.SoftThreadBus;
+import bl0.bjs.common.async.control.IAsyncBus;
 import bl0.bjs.eventbus.IEventBus;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.services.IServiceContainer;
@@ -13,13 +15,15 @@ public class Context implements IContext {
     public final EventBus eventBus = new EventBus();
     public final ServiceContainer services;
     public final LocalStorage localStorage;
-
     public final String hostname;
+
+    public final IAsyncBus asyncBus;
 
     public Context(LocalStorage localStorage, String hostname) {
         this.hostname = hostname;
         this.localStorage = localStorage;
         this.services = new ServiceContainer(this);
+        this.asyncBus = new SoftThreadBus(this);
     }
 
     @Override
@@ -40,6 +44,11 @@ public class Context implements IContext {
     @Override
     public String getHostname() {
         return hostname;
+    }
+
+    @Override
+    public IAsyncBus getAsyncBus() {
+        return null;
     }
 
 
