@@ -19,4 +19,8 @@ public class ActionController<T> implements IActionController<T> {
             action.invoke(data);
         }
     }
+
+    public void clear(){
+        actions.clear();
+    }
 }
