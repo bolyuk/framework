@@ -48,7 +48,7 @@ public class Context implements IContext {
 
     @Override
     public IAsyncBus getAsyncBus() {
-        return null;
+        return asyncBus;
     }
 
 

@@ -60,7 +60,7 @@ public class BoundObject<T> {
 
     private BoundObject<T> unbind(INotifier<?, ?> notifier) {
         this.bindings.remove(notifier);
-        notifier.addListener(this.updateListener);
+        notifier.remListener(this.updateListener);
         return this;
     }
 }
