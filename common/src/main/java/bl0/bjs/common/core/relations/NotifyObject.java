@@ -1,7 +1,7 @@
 package bl0.bjs.common.core.relations;
 
-import bl0.bjs.common.core.event.Action;
-import bl0.bjs.common.core.event.ActionController;
+import bl0.bjs.common.core.event.action.Action;
+import bl0.bjs.common.core.event.action.ActionController;
 
 public class NotifyObject<T> implements INotifier<NotifyObject<T>, T> {
     private T object;

@@ -1,7 +1,5 @@
 package bl0.bjs.common.async.control;
 
-import bl0.bjs.common.core.event.Action;
-
 import java.util.concurrent.Future;
 
 public interface IAsyncController<T> {

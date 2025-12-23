@@ -3,7 +3,7 @@
  */
 package bl0.bjs.common.core.relations;
 
-import bl0.bjs.common.core.event.Action;
+import bl0.bjs.common.core.event.action.Action;
 
 public interface INotifier<R, E> {
     public R addListener(Action<E> action);

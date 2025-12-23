@@ -1,6 +1,6 @@
 package bl0.bjs.common.core.relations;
 
-import bl0.bjs.common.core.event.Action;
+import bl0.bjs.common.core.event.action.Action;
 import bl0.bjs.common.core.event.Event;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
