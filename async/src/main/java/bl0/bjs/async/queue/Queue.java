@@ -10,11 +10,27 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
-public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
-    protected final ConcurrentLinkedDeque<T> data = new ConcurrentLinkedDeque<>();
-    protected final BiConsumer<BaseQueue<T>, T> queueFunction;
-    protected final Object lock = new Object();
-    protected boolean processing = false;
+import bl0.bjs.common.base.BJSBaseClass;
+import bl0.bjs.common.base.IContext;
+import bl0.bjs.async.AsyncExecutor;
+import bl0.bjs.common.core.tuple.TriConsumer;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+public class Queue<T> extends BJSBaseClass {
+    private final ArrayList<T> data = new ArrayList<>();
+    private final BiConsumer<Queue<T>, List<T>> queueFunction;
+    private final Object lock = new Object();
+    private boolean processing = false;
+    private int maxBatchSize = -1;
 
     // --- delay support ---
     private static final ScheduledExecutorService DELAY_EXECUTOR =
@@ -27,11 +43,16 @@ public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
     private long startDelayMillis = 0;
     private ScheduledFuture<?> delayedStartFuture;
 
-    public BaseQueue(IContext ctx, BiConsumer<BaseQueue<T>, T> queueFunction) {
+    public Queue(IContext ctx, BiConsumer<Queue<T>, List<T>> queueFunction) {
         super(ctx);
         this.queueFunction = queueFunction;
     }
 
+    public void setMaxBatchSize(int value) {
+        synchronized (lock) {
+            this.maxBatchSize = value;
+        }
+    }
 
     public void setStartDelayMillis(long delayMillis) {
         synchronized (lock) {
@@ -54,6 +75,12 @@ public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
         }
     }
 
+    public boolean isEmpty(){
+        synchronized (lock) {
+            return data.isEmpty();
+        }
+    }
+
     private void scheduleDelayedStart() {
         if (delayedStartFuture != null && !delayedStartFuture.isDone()) {
             delayedStartFuture.cancel(false);
@@ -72,19 +99,32 @@ public class BaseQueue<T> extends BJSBaseClass implements IQueue<T> {
 
     private void internalWork(){
         while (true) {
-            if (data.isEmpty()) {
-                processing = false;
-                return;
+            List<T> batch;
+
+            synchronized (lock) {
+                if (data.isEmpty()) {
+                    processing = false;
+                    return;
+                }
+                if(maxBatchSize == -1){
+                    batch = new ArrayList<>(data);
+                    data.clear();
+                } else {
+                    int batchSize = Math.min(maxBatchSize, data.size());
+                    batch = new ArrayList<>(data.subList(0, batchSize));
+                    data.subList(0, batchSize).clear();
+                }
+
             }
             try {
-                accept(this, data.poll());
+                accept(this, batch);
             } catch (Exception e) {
                 l.err("Error processing queue: ", e);
             }
         }
     }
 
-    protected void accept(BaseQueue<T> q, T batch){
+    protected void accept(Queue<T> q, List<T> batch){
         queueFunction.accept(q, batch);
     }
 }
