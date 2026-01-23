@@ -1,7 +1,9 @@
 package bl0.bjs.eventbus;
 
 public interface IEventBusController<T extends IEventBusNode<R>, R> {
-    public void subscribe(T node);
-    public void unsubscribe(T node);
-    public void fireEvent(R data);
+    void subscribe(T node);
+
+    void unsubscribe(T node);
+
+    void fireEvent(R data);
 }

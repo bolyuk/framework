@@ -7,15 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-public class LocalStorage implements IStorage {
-    private final Path homePath;
-
-    public LocalStorage(String path) {
-        homePath = Paths.get(path);
-    }
-
-    public Path getHomePath() {
-        return homePath;
+public record LocalStorage(Path homePath) implements IStorage {
+    public LocalStorage(String homePath) {
+        this.homePath = Paths.get(homePath);
     }
 
     public String read(String local_path) {

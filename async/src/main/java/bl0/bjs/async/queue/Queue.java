@@ -1,6 +1,5 @@
 package bl0.bjs.async.queue;
 
-import bl0.bjs.common.async.queue.IQueue;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.async.AsyncExecutor;
@@ -9,21 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
-
-import bl0.bjs.common.base.BJSBaseClass;
-import bl0.bjs.common.base.IContext;
-import bl0.bjs.async.AsyncExecutor;
-import bl0.bjs.common.core.tuple.TriConsumer;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 public class Queue<T> extends BJSBaseClass {
     private final ArrayList<T> data = new ArrayList<>();

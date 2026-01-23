@@ -1,24 +1,35 @@
 package bl0.bjs.logging.containers;
 
 public interface ILogBatch {
-    public void add(LogEntry log);
-    public void log(Object msg, String extra_info);
-    public void log(Object msg);
+    void add(LogEntry log);
 
-    public void warn(Object msg, String extra_info);
-    public void warn(Object msg);
+    void log(Object msg, String extra_info);
 
-    public void err(Object msg);
-    public void err(Object msg, Throwable e);
-    public void err(Object msg, String extra_info);
-    public void err(Object msg, String extra_info, Throwable e);
+    void log(Object msg);
 
-    public void flush();
-    public void flushIfLocal();
-    public void flushAndClear();
-    public void clear();
-    public boolean isErrorPresent();
-    public boolean isLocalBatch();
+    void warn(Object msg, String extra_info);
 
-    public String getID();
+    void warn(Object msg);
+
+    void err(Object msg);
+
+    void err(Object msg, Throwable e);
+
+    void err(Object msg, String extra_info);
+
+    void err(Object msg, String extra_info, Throwable e);
+
+    void flush();
+
+    void flushIfLocal();
+
+    void flushAndClear();
+
+    void clear();
+
+    boolean isErrorPresent();
+
+    boolean isLocalBatch();
+
+    String getID();
 }

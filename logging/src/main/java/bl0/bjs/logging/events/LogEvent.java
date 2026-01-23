@@ -6,4 +6,6 @@ import bl0.bjs.logging.containers.ILogBatch;
 import bl0.bjs.logging.containers.LogEntry;
 
 public interface LogEvent extends IEventBusNode<LogEvent.LogPayload> {
-    public record LogPayload(Class<?> source, LogEntry entry, ILogBatch batch) {} }
+    record LogPayload(Class<?> source, LogEntry entry, ILogBatch batch) {
+    }
+}

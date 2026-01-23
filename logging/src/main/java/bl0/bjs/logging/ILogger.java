@@ -5,20 +5,27 @@ import bl0.bjs.logging.containers.LogEntry;
 
 public interface ILogger {
 
-    public void log(Object msg, String extra_info);
-    public void log(Object msg);
+    void log(Object msg, String extra_info);
 
-    public void warn(Object msg, String extra_info);
-    public void warn(Object msg);
+    void log(Object msg);
 
-    public void err(Object msg);
-    public void err(Object msg, Throwable e);
-    public void err(Object msg, String extra_info);
-    public void err(Object msg, String extra_info, Throwable e);
+    void warn(Object msg, String extra_info);
 
-    public void add(LogEntry entry);
+    void warn(Object msg);
 
-    public ILogBatch genBatch();
-    public ILogBatch genLocalBatchIfNull(ILogBatch batch);
-    public void flushBatch(ILogBatch batch);
+    void err(Object msg);
+
+    void err(Object msg, Throwable e);
+
+    void err(Object msg, String extra_info);
+
+    void err(Object msg, String extra_info, Throwable e);
+
+    void add(LogEntry entry);
+
+    ILogBatch genBatch();
+
+    ILogBatch genLocalBatchIfNull(ILogBatch batch);
+
+    void flushBatch(ILogBatch batch);
 }

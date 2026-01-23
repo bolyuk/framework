@@ -28,8 +28,7 @@ public class ClassUtils {
         while (clazz != null && clazz != Object.class) {
             Type superclass = clazz.getGenericSuperclass();
 
-            if (superclass instanceof ParameterizedType) {
-                ParameterizedType parameterized = (ParameterizedType) superclass;
+            if (superclass instanceof ParameterizedType parameterized) {
                 Type raw = parameterized.getRawType();
 
                 if (raw instanceof Class && baseClass.isAssignableFrom((Class<?>) raw)) {

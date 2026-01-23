@@ -6,10 +6,10 @@ package bl0.bjs.common.core.relations;
 import bl0.bjs.common.core.event.action.Action;
 
 public interface INotifier<R, E> {
-    public R addListener(Action<E> action);
+    R addListener(Action<E> action);
 
-    public R remListener(Action<E> action);
+    R remListener(Action<E> action);
 
-    public R invoke();
+    R invoke();
 }
 
