@@ -17,8 +17,8 @@ public class BJSDB {
         this.logger = ctx.generateLogger(this.getClass());
     }
 
-    public void connect(String host, String dbName, String username, String password){
-        sessionFactory = HibernateUtil.buildSessionFactory(host, dbName, username, password);
+    public void connect(String host, String dbName, String username, String password, String entitiesPath){
+        sessionFactory = HibernateUtil.buildSessionFactory(host, dbName, username, password, entitiesPath);
     }
 
     public boolean isConnected(){

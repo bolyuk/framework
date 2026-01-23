@@ -1,6 +1,5 @@
 package bl0.bjs.async.queue;
 
-import bl0.bjs.common.async.queue.IQueue;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 

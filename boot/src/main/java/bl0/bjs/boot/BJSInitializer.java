@@ -62,8 +62,6 @@ public class BJSInitializer {
     }
 
     public static IContext defaultInit(String hostname) {
-        BJSInitializer.drawCoolLogo();
-
         BJSInitializer initializer = new BJSInitializer(hostname);
         initializer.showLogsInConsole();
         initializer.startExceptionHandler();

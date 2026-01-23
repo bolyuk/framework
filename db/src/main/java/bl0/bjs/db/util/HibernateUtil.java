@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class HibernateUtil {
 
-    public static SessionFactory buildSessionFactory(String host, String dbName, String user, String password ) {
+    public static SessionFactory buildSessionFactory(String host, String dbName, String user, String password, String entitiesPath) {
         try {
             Map<String, Object> settings = Map.of(
                     "hibernate.connection.driver_class", "org.mariadb.jdbc.Driver",
@@ -27,7 +27,7 @@ public class HibernateUtil {
 
             MetadataSources sources = new MetadataSources(registry);
 
-            Reflections reflections = new Reflections("org.bl0.bjs.maidbot.entities.data");
+            Reflections reflections = new Reflections(entitiesPath);
             var entities = reflections.getTypesAnnotatedWith(Entity.class);
             for (Class<?> entity : entities) {
                 sources.addAnnotatedClass(entity);
