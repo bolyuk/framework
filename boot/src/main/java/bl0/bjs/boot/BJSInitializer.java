@@ -9,12 +9,14 @@ import bl0.bjs.logging.events.LogEvent;
 import bl0.bjs.logging.utils.LogParser;
 import bl0.bjs.framework.files.LocalStorage;
 
+import java.nio.file.Path;
+
 public class BJSInitializer {
     private final Context ctx;
     private final ILogger logger;
 
     public BJSInitializer(String hostname) {
-        this.ctx = new Context(new LocalStorage(System.getProperty("user.dir")), hostname);
+        this.ctx = new Context(new LocalStorage(Path.of(System.getProperty("user.dir"))), hostname);
         this.logger = ctx.generateLogger(this.getClass());
     }
 

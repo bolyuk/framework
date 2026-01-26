@@ -8,9 +8,6 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public record LocalStorage(Path homePath) implements IStorage {
-    public LocalStorage(String homePath) {
-        this.homePath = Paths.get(homePath);
-    }
 
     public String read(String local_path) {
         return FilesUtils.readFromFile(homePath.resolve(local_path));
@@ -56,6 +53,6 @@ public record LocalStorage(Path homePath) implements IStorage {
                 ? folder_in.substring(1)
                 : folder_in;
 
-        return new LocalStorage(homePath.resolve(sanitizedFolder).toString());
+        return new LocalStorage(homePath.resolve(sanitizedFolder));
     }
 }
