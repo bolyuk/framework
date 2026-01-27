@@ -1,6 +1,6 @@
 package bl0.bjs.socket.core.communication;
 
-import bl0.bjs.async.queue.BaseQueue;
+import bl0.bjs.async.queue.Queue;
 import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.tuple.Pair;
@@ -37,7 +37,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     protected final ConcurrentHashMap<NamedSocket, List<String>> clients = new ConcurrentHashMap<>();
 
-    protected final BaseQueue<Pair<WebSocket, String>> acceptQueue;
+    protected final Queue<Pair<WebSocket, String>> acceptQueue;
     protected final QueuePool<String, Pair<NamedSocket, WSParcel>, ParcelQueue> queuePool;
 
     public WSServer(IContext context, InetSocketAddress address) {
@@ -51,7 +51,8 @@ public class WSServer extends WebSocketServer implements IWSBase {
         this.queuePool = new QueuePool<>(ctx, (s) -> new ParcelQueue(parcelRouter, responseRouter, ctx, ParcelQueue::QueueWorker));
         this.queuePool.setMaxBatchSize(1);
 
-        this.acceptQueue = new BaseQueue<>(ctx, this::acceptMessage);
+        this.acceptQueue = new Queue<>(ctx, this::acceptMessage);
+        this.acceptQueue.setMaxBatchSize(1);
     }
 
     @Override
@@ -106,9 +107,9 @@ public class WSServer extends WebSocketServer implements IWSBase {
         acceptQueue.pass(List.of(Pair.of(webSocket, json)));
     }
 
-    private void acceptMessage(BaseQueue<Pair<WebSocket, String>> stringQueue, Pair<WebSocket, String> data) {
-        WebSocket webSocket = data.first;
-        String json = data.second;
+    private void acceptMessage(Queue<Pair<WebSocket, String>> stringQueue, List<Pair<WebSocket, String>> data) {
+        WebSocket webSocket = data.getFirst().first;
+        String json = data.getFirst().second;
 
         NamedSocket client = find(webSocket);
         if(client == null)
