@@ -1,26 +1,26 @@
 package bl0.bjs.async.queue;
 
+import bl0.bjs.async.AsyncExecutor;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.async.AsyncExecutor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.function.BiConsumer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 public class Queue<T> extends BJSBaseClass {
     private final ArrayList<T> data = new ArrayList<>();
+    private final ArrayList<T> currentData = new ArrayList<>();
     private final BiConsumer<Queue<T>, List<T>> queueFunction;
     private final Object lock = new Object();
+
     private boolean processing = false;
     private int maxBatchSize = -1;
 
-    // --- delay support ---
     private static final ScheduledExecutorService DELAY_EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "QueueDelayScheduler");
@@ -48,53 +48,63 @@ public class Queue<T> extends BJSBaseClass {
         }
     }
 
-    public void pass(List<T> values){
+    public void pass(List<T> values) {
         synchronized (lock) {
-            data.addAll(values);
-
-            if (processing)
-                return;
-
-            if (startDelayMillis <= 0) {
-                processing = true;
-                AsyncExecutor.register(this::internalWork);
-            } else
-                scheduleDelayedStart();
+            unlockedPass(values);
         }
     }
 
-    public boolean isEmpty(){
+    public boolean passIf(List<T> values, java.util.function.Predicate<List<T>> allow) {
         synchronized (lock) {
-            return data.isEmpty();
+            ArrayList<T> all = new ArrayList<>(data.size() + currentData.size());
+            all.addAll(data);
+            all.addAll(currentData);
+
+            if (!allow.test(all)) return false;
+
+            unlockedPass(values);
+            return true;
         }
     }
 
-    private void scheduleDelayedStart() {
-        if (delayedStartFuture != null && !delayedStartFuture.isDone()) {
+    private void unlockedPass(List<T> values) {
+        data.addAll(values);
+
+        if (processing) return;
+
+        if (startDelayMillis <= 0) {
+            processing = true;
+            AsyncExecutor.register(this::internalWork);
+        } else {
+            scheduleDelayedStartUnlocked();
+        }
+    }
+
+    private void scheduleDelayedStartUnlocked() {
+        if (delayedStartFuture != null && !delayedStartFuture.isDone())
             delayedStartFuture.cancel(false);
-        }
 
         delayedStartFuture = DELAY_EXECUTOR.schedule(() -> {
             synchronized (lock) {
-                if (processing || data.isEmpty()) {
-                    return;
-                }
+                if (processing || data.isEmpty()) return;
                 processing = true;
             }
             AsyncExecutor.register(this::internalWork);
         }, startDelayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private void internalWork(){
+    private void internalWork() {
         while (true) {
             List<T> batch;
 
             synchronized (lock) {
                 if (data.isEmpty()) {
                     processing = false;
+                    currentData.clear();
                     return;
                 }
-                if(maxBatchSize == -1){
+
+                if (maxBatchSize == -1) {
                     batch = new ArrayList<>(data);
                     data.clear();
                 } else {
@@ -103,16 +113,26 @@ public class Queue<T> extends BJSBaseClass {
                     data.subList(0, batchSize).clear();
                 }
 
+                currentData.clear();
+                currentData.addAll(batch);
             }
+
             try {
-                accept(this, batch);
+                queueFunction.accept(this, batch);
             } catch (Exception e) {
                 l.err("Error processing queue: ", e);
+            } finally {
+                synchronized (lock) {
+                    currentData.clear();
+                }
             }
         }
     }
 
-    protected void accept(Queue<T> q, List<T> batch){
-        queueFunction.accept(q, batch);
+    public List<T> getCurrentDataSnapshot() {
+        synchronized (lock) {
+            return List.copyOf(currentData);
+        }
     }
 }
+
