@@ -4,6 +4,8 @@ public class Timer {
     private long startTime;
     private long endTime;
 
+    private boolean isDone;
+
     public Timer(){}
 
     public void start(){
@@ -13,7 +15,12 @@ public class Timer {
 
     public long stop(){
         this.endTime = System.currentTimeMillis();
+        isDone = true;
         return get();
+    }
+
+    public boolean isDone(){
+        return isDone;
     }
 
     public long get(){

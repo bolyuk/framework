@@ -21,6 +21,8 @@ public class Queue<T> extends BJSBaseClass {
     private boolean processing = false;
     private int maxBatchSize = -1;
 
+    private boolean async = true;
+
     private static final ScheduledExecutorService DELAY_EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "QueueDelayScheduler");
@@ -74,7 +76,10 @@ public class Queue<T> extends BJSBaseClass {
 
         if (startDelayMillis <= 0) {
             processing = true;
-            AsyncExecutor.register(this::internalWork);
+            if(async)
+                AsyncExecutor.register(this::internalWork);
+            else
+                internalWork();
         } else {
             scheduleDelayedStartUnlocked();
         }
@@ -126,6 +131,12 @@ public class Queue<T> extends BJSBaseClass {
                     currentData.clear();
                 }
             }
+        }
+    }
+
+    public void setAsync(boolean async) {
+        synchronized (lock) {
+            this.async = async;
         }
     }
 
