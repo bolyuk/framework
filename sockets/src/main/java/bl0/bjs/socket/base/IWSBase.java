@@ -13,7 +13,7 @@ public interface IWSBase {
     <T extends IWebSocketService> T getNamed(Class<T> service, String name);
     <T extends IWebSocketService> List<T> getAll(Class<T> service);
 
-    <T extends IEventBusNode<T>> void connectEventBus(Class<T> dataClass);
+    <T extends IEventBusNode<R>, R> void connectEventBus(Class<T> dataClass);
 
     String getName();
 

@@ -13,19 +13,19 @@ import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-public class ParcelQueue extends Queue<Pair<NamedSocket, WSParcel>> {
+public class ParcelQueue extends Queue<ParcelQueue.QueueContainer> {
     public final WSSParcelRouter parcelRouter;
     public final WSSResponseRouter responseRouter;
-    public ParcelQueue(WSSParcelRouter parcelRouter, WSSResponseRouter responseRouter, IContext ctx, BiConsumer<Queue<Pair<NamedSocket, WSParcel>>, List<Pair<NamedSocket, WSParcel>>> queueFunction) {
+    public ParcelQueue(WSSParcelRouter parcelRouter, WSSResponseRouter responseRouter, IContext ctx, BiConsumer<Queue<QueueContainer>, List<QueueContainer>> queueFunction) {
         super(ctx, queueFunction);
         this.parcelRouter = parcelRouter;
         this.responseRouter = responseRouter;
     }
 
-    public static void QueueWorker(Queue<Pair<NamedSocket, WSParcel>> q, List<Pair<NamedSocket, WSParcel>> data){
+    public static void QueueWorker(Queue<QueueContainer> q, List<QueueContainer> data){
         ParcelQueue queue = (ParcelQueue) q;
-        NamedSocket socket = data.getFirst().first;
-        WSParcel parcel = data.getFirst().second;
+        NamedSocket socket = data.getFirst().socket();
+        WSParcel parcel = data.getFirst().parcel();
 
         if(parcel.getPayload().getClass().equals(WSSRequest.class))
                 queue.parcelRouter.feed(parcel, socket);
@@ -36,4 +36,6 @@ public class ParcelQueue extends Queue<Pair<NamedSocket, WSParcel>> {
                     queue.l.err("response error: "+response.getData());
                 }
     }
+
+    public record QueueContainer(NamedSocket socket, WSParcel parcel) {}
 }

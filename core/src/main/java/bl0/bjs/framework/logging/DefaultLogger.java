@@ -64,6 +64,21 @@ public class DefaultLogger implements ILogger {
     }
 
     @Override
+    public void debug(Object msg, String extra_info) {
+        add(new LogEntry(msg.toString(), extra_info, null, Level.DEBUG));
+    }
+
+    @Override
+    public void debug(Object msg) {
+        add(new LogEntry(msg.toString(), null, null, Level.DEBUG));
+    }
+
+    @Override
+    public void debug(Object msg, Throwable e) {
+        add(new LogEntry(msg.toString(), null, e, Level.DEBUG));
+    }
+
+    @Override
     public void add(LogEntry entry) {
         everyLogController.fireEvent(new LogEvent.LogPayload(binding, entry, null));
     }

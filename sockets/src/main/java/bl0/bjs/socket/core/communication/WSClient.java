@@ -7,6 +7,7 @@ import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.eventbus.IEventBusController;
 import bl0.bjs.eventbus.IEventBusNode;
 import bl0.bjs.logging.ILogger;
+import bl0.bjs.logging.events.LogBatchEvent;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
 import bl0.bjs.socket.core.parcel.WSParcel;
@@ -22,20 +23,25 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class WSClient extends WebSocketClient implements IWSBase {
     protected final ILogger l;
     protected final IContext ctx;
-
     protected final WSSResponseRouter responseRouter;
     protected final WSSParcelRouter parcelRouter;
 
     protected final String name;
+
+    protected final ArrayList<IEventBusController<?,?>> connectedEventBusControllers = new ArrayList<>();
+
     protected NamedSocket socket;
 
-    protected final QueuePool<String, Pair<NamedSocket, WSParcel>, ParcelQueue> queuePool;
+    protected final QueuePool<String, ParcelQueue.QueueContainer, ParcelQueue> queuePool;
 
     public WSClient(IContext context, URI serverUri, String name) {
         super(serverUri);
@@ -66,10 +72,13 @@ public class WSClient extends WebSocketClient implements IWSBase {
         return List.of();
     }
 
-    @Override //TODO
-    public <T extends IEventBusNode<T>> void connectEventBus(Class<T> dataClass) {
-      IEventBusController<?,?> controller = ctx.getEventBus().getController(dataClass);
+    @Override
+    public <T extends IEventBusNode<R>, R> void connectEventBus(Class<T> dataClass) {
+      IEventBusController<T,R> controller = ctx.getEventBus().getController(dataClass);
+      controller.subscribeGeneric(this::broadcast);
+      connectedEventBusControllers.add(controller);
     }
+
 
     @Override
     public String getName() {
@@ -88,12 +97,12 @@ public class WSClient extends WebSocketClient implements IWSBase {
             return;
         }
 
-        queuePool.pass(bParcel.getFrom(), Pair.of(socket, bParcel));
+        queuePool.pass(bParcel.getFrom(), new ParcelQueue.QueueContainer(socket, bParcel));
     }
 
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
-        l.log("Connection opened");
+        l.debug("Connection opened");
         socket = new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false);
         authorize();
     }
@@ -120,6 +129,7 @@ public class WSClient extends WebSocketClient implements IWSBase {
         authPayload.setName(name);
         parcel.setPayload(authPayload);
 
+        responseRouter.prepare(parcel.getUuid());
         socket.send(parcel);
         responseRouter.await(parcel.getUuid());
     }
@@ -137,7 +147,7 @@ public class WSClient extends WebSocketClient implements IWSBase {
         l.err(e);
     }
 
-    private <T extends IEventBusNode<T>> void broadcast(T data) {
+    private <T extends IEventBusNode<R>, R> void broadcast(R data) {
         WSParcel parcel = genDefaultParcel(NamedSocket.SERVER);
         parcel.setPayload(new WSSEvent(data));
         socket.send(parcel);

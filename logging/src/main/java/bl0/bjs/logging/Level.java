@@ -1,5 +1,5 @@
 package bl0.bjs.logging;
 
 public enum Level {
-    INFO, WARNING, ERROR, FATAL
+    INFO, WARNING, ERROR, FATAL, DEBUG
 }

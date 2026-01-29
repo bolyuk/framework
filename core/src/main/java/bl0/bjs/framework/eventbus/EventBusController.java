@@ -18,6 +18,11 @@ public class EventBusController<T extends IEventBusNode<R>,R> implements IEventB
     }
 
     @Override
+    public void subscribeGeneric(IEventBusNode<R> node) {
+        eventBus.getNode(clazzT).add(node);
+    }
+
+    @Override
     public void unsubscribe(T node) {
         eventBus.getNode(clazzT).remove(node);
     }

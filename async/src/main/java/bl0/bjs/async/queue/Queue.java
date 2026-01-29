@@ -56,6 +56,12 @@ public class Queue<T> extends BJSBaseClass {
         }
     }
 
+    public void pass(T value) {
+        synchronized (lock) {
+            unlockedPass(value);
+        }
+    }
+
     public boolean passIf(List<T> values, java.util.function.Predicate<List<T>> allow) {
         synchronized (lock) {
             ArrayList<T> all = new ArrayList<>(data.size() + currentData.size());
@@ -66,6 +72,22 @@ public class Queue<T> extends BJSBaseClass {
 
             unlockedPass(values);
             return true;
+        }
+    }
+
+    private void unlockedPass(T value) {
+        data.add(value);
+
+        if (processing) return;
+
+        if (startDelayMillis <= 0) {
+            processing = true;
+            if(async)
+                AsyncExecutor.register(this::internalWork);
+            else
+                internalWork();
+        } else {
+            scheduleDelayedStartUnlocked();
         }
     }
 

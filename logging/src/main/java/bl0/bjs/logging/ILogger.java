@@ -21,6 +21,11 @@ public interface ILogger {
 
     void err(Object msg, String extra_info, Throwable e);
 
+    void debug(Object msg, String extra_info);
+    void debug(Object msg);
+
+    void debug(Object msg, Throwable e);
+
     void add(LogEntry entry);
 
     ILogBatch genBatch();

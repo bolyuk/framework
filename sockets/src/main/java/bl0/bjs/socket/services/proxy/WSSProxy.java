@@ -62,6 +62,7 @@ public class WSSProxy {
         if (method.getReturnType() == Void.TYPE) {
             return null;
         } else {
+            waiter.prepare(parcel.getUuid());
             Object data = waiter.await(parcel.getUuid());
             if(data instanceof Throwable t)
                 throw t;

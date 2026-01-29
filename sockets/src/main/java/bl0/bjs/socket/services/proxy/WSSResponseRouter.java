@@ -22,9 +22,16 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         super(ctx);
     }
 
-    public Object await(UUID uuid) {
+    public void prepare(UUID uuid){
         Pair<CountDownLatch, Object> pair = Pair.of(new CountDownLatch(1), null);
         awaiter.put(uuid, pair);
+    }
+
+    public Object await(UUID uuid) {
+        Pair<CountDownLatch, Object> pair = awaiter.getOrDefault(uuid, null);
+        if(pair == null)
+            throw new IllegalStateException("No awaiters for UUID " + uuid + " was prepared!");
+
         try {
             boolean ok = pair.first.await(10, TimeUnit.SECONDS);
             if (!ok) {

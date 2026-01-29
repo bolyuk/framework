@@ -37,8 +37,8 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     protected final ConcurrentHashMap<NamedSocket, List<String>> clients = new ConcurrentHashMap<>();
 
-    protected final Queue<Pair<WebSocket, String>> acceptQueue;
-    protected final QueuePool<String, Pair<NamedSocket, WSParcel>, ParcelQueue> queuePool;
+    protected final Queue<AcceptContainer> acceptQueue;
+    protected final QueuePool<String, ParcelQueue.QueueContainer, ParcelQueue> queuePool;
 
     public WSServer(IContext context, InetSocketAddress address) {
         super(address);
@@ -81,7 +81,8 @@ public class WSServer extends WebSocketServer implements IWSBase {
     }
 
     @Override //TODO
-    public <T extends IEventBusNode<T>> void connectEventBus(Class<T> dataClass) {
+    public <T extends IEventBusNode<R>, R> void connectEventBus(Class<T> dataClass) {
+
     }
 
     @Override
@@ -98,18 +99,18 @@ public class WSServer extends WebSocketServer implements IWSBase {
        NamedSocket socket = find(webSocket);
        if (socket != null) {
            clients.remove(socket);
-           l.log(socket.getName() + " closed");
+           l.debug(socket.getName() + " closed");
        }
     }
 
     @Override
     public void onMessage(WebSocket webSocket, String json) {
-        acceptQueue.pass(List.of(Pair.of(webSocket, json)));
+        acceptQueue.pass(new AcceptContainer(webSocket, json));
     }
 
-    private void acceptMessage(Queue<Pair<WebSocket, String>> stringQueue, List<Pair<WebSocket, String>> data) {
-        WebSocket webSocket = data.getFirst().first;
-        String json = data.getFirst().second;
+    private void acceptMessage(Queue<AcceptContainer> stringQueue, List<AcceptContainer> data) {
+        WebSocket webSocket = data.getFirst().socket;
+        String json = data.getFirst().parcel;
 
         NamedSocket client = find(webSocket);
         if(client == null)
@@ -127,10 +128,10 @@ public class WSServer extends WebSocketServer implements IWSBase {
             return;
 
         if(bParcel.getTo() != null && bParcel.getTo().equals(NamedSocket.SERVER)){
-            queuePool.pass(bParcel.getFrom(), Pair.of(client, bParcel));
+            queuePool.pass(bParcel.getFrom(), new ParcelQueue.QueueContainer(client, bParcel));
         } else {
             if(bParcel.getPayload() instanceof WSSEvent e){
-                //TODO
+                // TODO
             } else {
                 String path = bParcel.getPayload() instanceof WSSRequest r ? r.getPath() : null;
                 NamedSocket socket = find(path, bParcel.getTo());
@@ -138,7 +139,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
                     ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.RECIPIENT_NOT_FOUND, json, client, l, NamedSocket.SERVER);
                 else {
                     socket.send(bParcel);
-                    l.log("parcel rerouted from:" + bParcel.getFrom() + " to:" + socket.getName());
+                    l.debug("parcel rerouted from:" + bParcel.getFrom() + " to:" + socket.getName());
                 }
             }
         }
@@ -204,7 +205,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
         if(parcel.getPayload() instanceof WSSAuth authPayload){
             socket = new NamedSocket(ctx, socket.getSocket(), authPayload.getName(), true);
             clients.put(socket, new ArrayList<>());
-            l.log("client ["+socket.getName()+"] registered");
+            l.debug("client ["+socket.getName()+"] registered");
             return true;
         }
         return false;
@@ -219,4 +220,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
         }
         return null;
     }
+
+    public record AcceptContainer(WebSocket socket, String parcel) {}
+
 }
