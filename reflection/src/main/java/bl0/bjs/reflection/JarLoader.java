@@ -1,6 +1,7 @@
 package bl0.bjs.reflection;
 
 import bl0.bjs.common.core.event.Event;
+import bl0.bjs.common.core.event.action.Action;
 import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.logging.containers.ILogBatch;
 
@@ -22,7 +23,7 @@ public class JarLoader {
         }
     }
 
-    public static void parseClasses(URLClassLoader loader, String jarPath, ILogBatch batch, Event<Class<?>, Void> onLoaded, Event<Pair<String, Throwable>, Void> onFailed) {
+    public static void parseClasses(URLClassLoader loader, String jarPath, ILogBatch batch, Action<Class<?>> onLoaded, Action<Pair<String, Throwable>> onFailed) {
         try (JarFile jarFile = new JarFile(new File(jarPath))) {
             Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
