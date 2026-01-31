@@ -1,13 +1,13 @@
 package bl0.bjs.boot;
 
-import bl0.bjs.framework.Context;
 import bl0.bjs.common.base.IContext;
+import bl0.bjs.framework.Context;
+import bl0.bjs.framework.files.LocalStorage;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.logging.Level;
 import bl0.bjs.logging.containers.LogEntry;
 import bl0.bjs.logging.events.LogEvent;
 import bl0.bjs.logging.utils.LogParser;
-import bl0.bjs.framework.files.LocalStorage;
 
 import java.nio.file.Path;
 
@@ -20,15 +20,15 @@ public class BJSInitializer {
         this.logger = ctx.generateLogger(this.getClass());
     }
 
-    public void startExceptionHandler(){
+    public void startExceptionHandler() {
         Thread.setDefaultUncaughtExceptionHandler(this::catchExceptions);
     }
 
-    public void showLogsInConsole(){
+    public void showLogsInConsole() {
         ctx.getEventBus().getController(LogEvent.class).subscribe(this::log);
     }
 
-    public IContext getContext(){
+    public IContext getContext() {
         return ctx;
     }
 
@@ -54,13 +54,13 @@ public class BJSInitializer {
             msg += " " + data.entry().extra_info();
 
         if (data.entry().exception() != null)
-            msg += " "+data.entry().exception().getMessage();
+            msg += " " + data.entry().exception();
 
-        System.out.println(ctx.getHostname().toUpperCase()+": "+prefix + " " + data.entry().level() + " - " + msg);
+        System.out.println(ctx.getHostname().toUpperCase() + ": " + prefix + " " + data.entry().level() + " - " + msg);
     }
 
     private void catchExceptions(Thread t, Throwable e) {
-        logger.add(new LogEntry("Uncaught exception!", null, e, Level.FATAL));
+        logger.add(new LogEntry("Uncaught exception!", null, e.toString(), Level.FATAL));
     }
 
     public static IContext defaultInit(String hostname) {

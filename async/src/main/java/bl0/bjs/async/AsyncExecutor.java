@@ -15,20 +15,21 @@ public class AsyncExecutor {
     /// register and start IAsync
     /// </summary>
     public static void register(IAsync task) {
-        data.put(task,executor.submit(task));
+        executor.execute(task);
     }
 
     /// <summary>
     /// stop and delete IAsync
     /// </summary>
-    public static void unregister(IAsync task){
+    public static void unregister(IAsync task) {
         data.get(task).cancel(true);
         data.remove(task);
     }
+
     /// <summary>
     /// Stop und delete all tasks
     /// </summary>
-    public static void stopAll(){
+    public static void stopAll() {
         data.forEach(((t, future) -> future.cancel(true)));
         data.clear();
     }

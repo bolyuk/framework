@@ -3,22 +3,25 @@ package bl0.bjs.socket.core.communication;
 import bl0.bjs.async.AsyncExecutor;
 import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.eventbus.IEventBusController;
 import bl0.bjs.eventbus.IEventBusNode;
 import bl0.bjs.logging.ILogger;
-import bl0.bjs.logging.events.LogBatchEvent;
+import bl0.bjs.services.IServiceExtender;
+import bl0.bjs.services.Service;
+import bl0.bjs.services.interfaces.IService;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
+import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.core.parcel.WSParcel;
 import bl0.bjs.socket.core.parcel.payload.WSSEvent;
 import bl0.bjs.socket.core.parcel.payload.auth.WSSAuth;
-import bl0.bjs.socket.services.proxy.WSSResponseRouter;
-import bl0.bjs.socket.services.proxy.WSSParcelRouter;
-import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.services.IWebSocketService;
+import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.services.proxy.WSSProxy;
+import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import bl0.bjs.socket.utils.ParcelUtils;
+import com.google.gson.GsonBuilder;
+import lombok.SneakyThrows;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
@@ -26,10 +29,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
-public class WSClient extends WebSocketClient implements IWSBase {
+public class WSClient extends WebSocketClient implements IWSBase, IServiceExtender {
     protected final ILogger l;
     protected final IContext ctx;
     protected final WSSResponseRouter responseRouter;
@@ -37,7 +38,7 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     protected final String name;
 
-    protected final ArrayList<IEventBusController<?,?>> connectedEventBusControllers = new ArrayList<>();
+    protected final ArrayList<IEventBusController<?, ?>> connectedEventBusControllers = new ArrayList<>();
 
     protected NamedSocket socket;
 
@@ -74,9 +75,9 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     @Override
     public <T extends IEventBusNode<R>, R> void connectEventBus(Class<T> dataClass) {
-      IEventBusController<T,R> controller = ctx.getEventBus().getController(dataClass);
-      controller.subscribeGeneric(this::broadcast);
-      connectedEventBusControllers.add(controller);
+        IEventBusController<T, R> controller = ctx.getEventBus().getController(dataClass);
+        controller.subscribeGeneric(this::broadcast);
+        connectedEventBusControllers.add(controller);
     }
 
 
@@ -89,10 +90,10 @@ public class WSClient extends WebSocketClient implements IWSBase {
     public void onMessage(String s) {
         WSParcel bParcel = ParcelUtils.tryParse(s, socket, l, name);
 
-        if(bParcel == null)
+        if (bParcel == null)
             return;
 
-        if(socket == null){
+        if (socket == null) {
             l.err("connection is dead ???");
             return;
         }
@@ -105,36 +106,76 @@ public class WSClient extends WebSocketClient implements IWSBase {
         l.debug("Connection opened");
         socket = new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false);
         authorize();
+        ctx.getServiceContainer().addExtender(this);
+        onConnected();
+    }
+
+    protected void onConnected() {
     }
 
     @Override
     public void onClose(int i, String s, boolean b) {
         socket = null;
+        onDisconnected();
         tryReconnect(10, s);
     }
 
+    private void onDisconnected() {
+    }
+
     private void tryReconnect(int tries, String s) {
-        if(tries == 0) {
+        if (tries == 0) {
             l.err("Reconnecting failed");
             return;
         }
-        l.warn("Connection closed [ "+s+" ], reconnecting...");
-        AsyncExecutor.register(()-> tryReconnect(tries-1, s));
+
+        l.warn("Reconnecting... tries left=" + tries + " reason=" + s);
+
+        AsyncExecutor.register(() -> {
+            try {
+                Thread.sleep(500);
+                this.reconnectBlocking(); // или connectBlocking если клиент новый
+            } catch (Exception e) {
+                l.err("Reconnect failed", e);
+                tryReconnect(tries - 1, s);
+            }
+        });
     }
 
-    private void authorize(){
+    @SneakyThrows
+    private void authorize() {
         WSParcel parcel = genDefaultParcel(NamedSocket.SERVER);
 
         WSSAuth authPayload = new WSSAuth();
         authPayload.setName(name);
+
+        List<? extends Class<? extends IWebSocketService>> services = ctx.getServiceContainer()
+                .getAllServices()
+                .stream()
+                .filter(IWebSocketService.class::isAssignableFrom).map(x -> (Class<? extends IWebSocketService>) x).toList();
+
+        ArrayList<String> prepared = new ArrayList<>();
+
+        for (Class<? extends IWebSocketService> service : services) {
+            if (service.getAnnotation(Service.class) != null)
+                for (var exp : service.getAnnotation(Service.class).exportServices())
+                    prepared.add(exp.getSimpleName());
+        }
+
+        authPayload.setServices(prepared.toArray(String[]::new));
         parcel.setPayload(authPayload);
 
         responseRouter.prepare(parcel.getUuid());
         socket.send(parcel);
-        responseRouter.await(parcel.getUuid());
+//        var response = responseRouter.await(parcel.getUuid());
+//
+//        if (response != null)
+//            l.debug("Registration ACK");
+//        else
+//            l.debug("Registration FAILED");
     }
 
-    private WSParcel genDefaultParcel(String to){
+    private WSParcel genDefaultParcel(String to) {
         WSParcel parcel = new WSParcel();
         parcel.setFrom(name);
         parcel.setTo(to);
@@ -149,7 +190,17 @@ public class WSClient extends WebSocketClient implements IWSBase {
 
     private <T extends IEventBusNode<R>, R> void broadcast(R data) {
         WSParcel parcel = genDefaultParcel(NamedSocket.SERVER);
-        parcel.setPayload(new WSSEvent(data));
+        parcel.setPayload(new WSSEvent(data, new GsonBuilder()
+                .excludeFieldsWithoutExposeAnnotation()
+                .create()));
         socket.send(parcel);
+    }
+
+    @Override
+    public <T extends IService> T find(Class<T> serviceClass) {
+        if (!IWebSocketService.class.isAssignableFrom(serviceClass))
+            return null;
+
+        return (T) get((Class<? extends IWebSocketService>) serviceClass);
     }
 }

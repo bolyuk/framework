@@ -2,12 +2,18 @@ package bl0.bjs.services;
 
 import bl0.bjs.services.interfaces.IService;
 
+import java.util.List;
+
 public interface IServiceContainer {
-    <T extends IService> T getService(Class<T> serviceClass);
+    <T extends IService> T get(Class<T> serviceClass);
 
-    boolean registerService(Class<?> serviceClass);
+    <T extends IService> boolean add(Class<T> serviceClass);
 
-    void unregisterService(Class<?> serviceClass);
+    void addSingleton(Object instance);
 
-    void registerSingelton(Object instance, Class<? extends IService> serviceInterface);
+    List<? extends Class<? extends IService>> getAllServices();
+
+    void addExtender(IServiceExtender extender);
+
+    void removeExtender(IServiceExtender extender);
 }

@@ -10,7 +10,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Service {
-    Class<? extends IService> exportService();
-    boolean isSingelton() default true;
+    Class<? extends IService>[] exportServices();
+
+    boolean isSingleton() default true;
+
     boolean isAutoBindingEnabled() default true;
 }

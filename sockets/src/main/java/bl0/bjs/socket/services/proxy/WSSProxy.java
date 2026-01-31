@@ -1,5 +1,6 @@
 package bl0.bjs.socket.services.proxy;
 
+import bl0.bjs.async.stream.IStream;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IResponseAwaiter;
@@ -27,7 +28,7 @@ public class WSSProxy {
 
     @SneakyThrows
     private static Object proxyMethod(Method method, Object[] args, NamedSocket socket, Class<?> iface, ILogger l, IResponseAwaiter waiter, String name) {
-        if(socket == null || socket.isClosed())
+        if (socket == null || socket.isClosed())
             throw new IllegalStateException("Socket is closed!");
 
         UUID uuid = UUID.randomUUID();
@@ -56,15 +57,20 @@ public class WSSProxy {
         request.setParams(params);
         request.setParamTypes(paramTypes);
 
-        l.log(iface.getSimpleName()+"."+method.getName()+" ip: "+socket.getAddress());
+        l.log(iface.getSimpleName() + "." + method.getName() + " ip: " + socket.getAddress());
 
-        socket.send(parcel);
         if (method.getReturnType() == Void.TYPE) {
+            socket.send(parcel);
             return null;
+        } else if (IStream.class == method.getReturnType()) {
+            var StreamProxy = new StreamProxy<>(socket, parcel.getUuid(), waiter, parcel);
+            waiter.prepareStream(StreamProxy);
+            return StreamProxy;
         } else {
             waiter.prepare(parcel.getUuid());
+            socket.send(parcel);
             Object data = waiter.await(parcel.getUuid());
-            if(data instanceof Throwable t)
+            if (data instanceof Throwable t)
                 throw t;
             return data;
         }

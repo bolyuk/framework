@@ -1,8 +1,8 @@
 package bl0.bjs.framework.logging;
 
 
-import bl0.bjs.framework.Context;
 import bl0.bjs.eventbus.IEventBusController;
+import bl0.bjs.framework.Context;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.logging.Level;
 import bl0.bjs.logging.containers.ILogBatch;
@@ -50,7 +50,7 @@ public class DefaultLogger implements ILogger {
 
     @Override
     public void err(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e, Level.ERROR));
+        add(new LogEntry(msg.toString(), null, e.toString(), Level.ERROR));
     }
 
     @Override
@@ -60,7 +60,7 @@ public class DefaultLogger implements ILogger {
 
     @Override
     public void err(Object msg, String extra_info, Throwable e) {
-        add(new LogEntry(msg.toString(), extra_info, e, Level.ERROR));
+        add(new LogEntry(msg.toString(), extra_info, e.toString(), Level.ERROR));
     }
 
     @Override
@@ -75,7 +75,7 @@ public class DefaultLogger implements ILogger {
 
     @Override
     public void debug(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e, Level.DEBUG));
+        add(new LogEntry(msg.toString(), null, e.toString(), Level.DEBUG));
     }
 
     @Override

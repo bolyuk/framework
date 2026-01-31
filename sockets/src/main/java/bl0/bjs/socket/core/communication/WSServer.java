@@ -3,20 +3,20 @@ package bl0.bjs.socket.core.communication;
 import bl0.bjs.async.queue.Queue;
 import bl0.bjs.async.queue.QueuePool;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.tuple.Pair;
 import bl0.bjs.eventbus.IEventBusNode;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IWSBase;
 import bl0.bjs.socket.core.ParcelQueue;
+import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.core.parcel.WSParcel;
 import bl0.bjs.socket.core.parcel.payload.WSSEvent;
-import bl0.bjs.socket.core.parcel.payload.auth.WSSAuth;
-import bl0.bjs.socket.services.proxy.WSSParcelRouter;
-import bl0.bjs.socket.services.proxy.WSSResponseRouter;
-import bl0.bjs.socket.core.data.NamedSocket;
-import bl0.bjs.socket.services.IWebSocketService;
 import bl0.bjs.socket.core.parcel.payload.WSSRequest;
+import bl0.bjs.socket.core.parcel.payload.WSSResponse;
+import bl0.bjs.socket.core.parcel.payload.auth.WSSAuth;
+import bl0.bjs.socket.services.IWebSocketService;
+import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.services.proxy.WSSProxy;
+import bl0.bjs.socket.services.proxy.WSSResponseRouter;
 import bl0.bjs.socket.utils.ParcelErrors;
 import bl0.bjs.socket.utils.ParcelUtils;
 import org.java_websocket.WebSocket;
@@ -25,6 +25,7 @@ import org.java_websocket.server.WebSocketServer;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -67,12 +68,12 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     @Override
     public <T extends IWebSocketService> T getNamed(Class<T> service, String name) {
-        NamedSocket client = find(service.getName(), name);
+        NamedSocket client = find(service.getSimpleName(), name);
         if (client == null) {
-            l.warn("Named service "+service.getName() + " not found");
+            l.warn("Named service " + service.getName() + " not found");
             return null;
         }
-        return WSSProxy.bind(service, client, ctx, responseRouter, null);
+        return WSSProxy.bind(service, client, ctx, responseRouter, NamedSocket.SERVER);
     }
 
     @Override //TODO
@@ -96,11 +97,12 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     @Override
     public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-       NamedSocket socket = find(webSocket);
-       if (socket != null) {
-           clients.remove(socket);
-           l.debug(socket.getName() + " closed");
-       }
+        NamedSocket socket = find(webSocket);
+        if (socket != null) {
+            clients.remove(socket);
+            l.debug(socket.getName() + " closed");
+            onClose(socket);
+        }
     }
 
     @Override
@@ -113,25 +115,25 @@ public class WSServer extends WebSocketServer implements IWSBase {
         String json = data.getFirst().parcel;
 
         NamedSocket client = find(webSocket);
-        if(client == null)
+        if (client == null)
             client = new NamedSocket(ctx, webSocket, null, false);
 
         WSParcel bParcel = ParcelUtils.tryParse(json, client, l, NamedSocket.SERVER);
 
-        if(bParcel == null)
+        if (bParcel == null)
             return;
 
-        if(!authGateway(bParcel, client, l))
+        if (!authGateway(bParcel, client, l))
             return;
 
-        if(registerIfNeeded(client, bParcel))
+        if (registerIfNeeded(client, bParcel))
             return;
 
-        if(bParcel.getTo() != null && bParcel.getTo().equals(NamedSocket.SERVER)){
+        if (bParcel.getTo() != null && bParcel.getTo().equals(NamedSocket.SERVER)) {
             queuePool.pass(bParcel.getFrom(), new ParcelQueue.QueueContainer(client, bParcel));
         } else {
-            if(bParcel.getPayload() instanceof WSSEvent e){
-                // TODO
+            if (bParcel.getPayload() instanceof WSSEvent e) {
+                doEvent(client, e);
             } else {
                 String path = bParcel.getPayload() instanceof WSSRequest r ? r.getPath() : null;
                 NamedSocket socket = find(path, bParcel.getTo());
@@ -152,21 +154,21 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     @Override
     public void onStart() {
-        l.log("Server started");
+        l.debug("Server started");
     }
 
     protected NamedSocket find(String clazz, String name) {
-        if(clients.isEmpty())
+        if (clients.isEmpty())
             return null;
 
         for (var data : clients.entrySet()) {
-            if(name != null && !data.getKey().getName().equals(name))
+            if (name != null && !data.getKey().getName().equals(name))
                 continue;
 
-            if(clazz != null && data.getValue().contains(clazz))
+            if (clazz != null && data.getValue().contains(clazz))
                 return data.getKey();
 
-            if(clazz == null && data.getKey().getName().equals(name))
+            if (clazz == null && data.getKey().getName().equals(name))
                 return data.getKey();
         }
         return null;
@@ -174,11 +176,11 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     protected List<NamedSocket> findAll(String clazz) {
         ArrayList<NamedSocket> result = new ArrayList<>();
-        if(clients.isEmpty())
+        if (clients.isEmpty())
             return result;
 
         for (var data : clients.entrySet()) {
-            if(clazz != null && data.getValue().contains(clazz))
+            if (clazz != null && data.getValue().contains(clazz))
                 result.add(data.getKey());
         }
         return result;
@@ -186,15 +188,15 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     private boolean authGateway(WSParcel parcel, NamedSocket client, ILogger l) {
         boolean isRegParcel = false;
-        if(parcel.getPayload() instanceof WSSAuth authPayload)
-            if(client.isAuthorized() || authPayload.getName() == null || parcel.getTo() == null || !parcel.getTo().equals(NamedSocket.SERVER)){
+        if (parcel.getPayload() instanceof WSSAuth authPayload)
+            if (client.isAuthorized() || authPayload.getName() == null || parcel.getTo() == null || !parcel.getTo().equals(NamedSocket.SERVER)) {
                 ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.AUTH_WRONG_DATA, null, client, l, NamedSocket.SERVER);
                 return false;
             } else
                 isRegParcel = true;
 
         // unauthorized
-        if(!client.isAuthorized() && !isRegParcel){
+        if (!client.isAuthorized() && !isRegParcel) {
             ParcelUtils.sendParcelErrorBackAndLog(ParcelErrors.UNAUTHORIZED, null, client, l, NamedSocket.SERVER);
             return false;
         }
@@ -202,25 +204,48 @@ public class WSServer extends WebSocketServer implements IWSBase {
     }
 
     private boolean registerIfNeeded(NamedSocket socket, WSParcel parcel) {
-        if(parcel.getPayload() instanceof WSSAuth authPayload){
+        if (parcel.getPayload() instanceof WSSAuth authPayload) {
             socket = new NamedSocket(ctx, socket.getSocket(), authPayload.getName(), true);
-            clients.put(socket, new ArrayList<>());
-            l.debug("client ["+socket.getName()+"] registered");
+            clients.put(socket, Arrays.stream(authPayload.getServices()).toList());
+            l.debug("client [" + socket.getName() + "] registered");
+
+            WSParcel answerParcel = new WSParcel();
+
+            answerParcel.setTo(socket.getName());
+            answerParcel.setFrom(getName());
+            answerParcel.setUuid(parcel.getUuid());
+
+            WSSResponse answerPayload = new WSSResponse();
+            answerParcel.setPayload(answerPayload);
+            answerPayload.setSuccess(true);
+
+            socket.send(answerParcel);
+            onRegistered(socket);
             return true;
         }
         return false;
     }
 
+    protected void onRegistered(NamedSocket socket) {
+    }
+
+    protected void doEvent(NamedSocket client, WSSEvent e) {
+    }
+
+    protected void onClose(NamedSocket socket) {
+    }
+
     protected NamedSocket find(WebSocket socket) {
-        if(clients.isEmpty())
+        if (clients.isEmpty())
             return null;
         for (var data : clients.keySet()) {
-            if(data.getSocket().equals(socket) || data.getSocket().getRemoteSocketAddress().equals(socket.getRemoteSocketAddress()))
+            if (data.getSocket().equals(socket) || data.getSocket().getRemoteSocketAddress().equals(socket.getRemoteSocketAddress()))
                 return data;
         }
         return null;
     }
 
-    public record AcceptContainer(WebSocket socket, String parcel) {}
+    public record AcceptContainer(WebSocket socket, String parcel) {
+    }
 
 }

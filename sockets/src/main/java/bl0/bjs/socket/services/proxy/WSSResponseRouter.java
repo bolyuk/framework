@@ -1,10 +1,12 @@
 package bl0.bjs.socket.services.proxy;
 
+import bl0.bjs.async.stream.StreamChunk;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
-import bl0.bjs.common.core.tuple.Pair;
+import bl0.bjs.common.core.time.Timer;
 import bl0.bjs.socket.base.IResponseAwaiter;
 import bl0.bjs.socket.core.parcel.WSParcel;
+import bl0.bjs.socket.core.parcel.payload.WSPseudoStream;
 import bl0.bjs.socket.core.parcel.payload.WSSResponse;
 import com.google.gson.Gson;
 
@@ -16,64 +18,116 @@ import java.util.concurrent.TimeUnit;
 public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter {
 
     private final Gson gson = new Gson();
-    private final ConcurrentHashMap<UUID, Pair<CountDownLatch, Object>> awaiter = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, AwaitState> awaiter = new ConcurrentHashMap<>();
+
+    private final Object lock = new Object();
 
     public WSSResponseRouter(IContext ctx) {
         super(ctx);
     }
 
-    public void prepare(UUID uuid){
-        Pair<CountDownLatch, Object> pair = Pair.of(new CountDownLatch(1), null);
-        awaiter.put(uuid, pair);
+    public void prepare(UUID uuid) {
+        synchronized (lock) {
+            AwaitState s = new AwaitState();
+            s.isStream = false;
+            awaiter.put(uuid, s);
+        }
     }
 
-    public Object await(UUID uuid) {
-        Pair<CountDownLatch, Object> pair = awaiter.getOrDefault(uuid, null);
-        if(pair == null)
-            throw new IllegalStateException("No awaiters for UUID " + uuid + " was prepared!");
-
-        try {
-            boolean ok = pair.first.await(10, TimeUnit.SECONDS);
-            if (!ok) {
-                l.err("Timeout for uuid "+uuid+" (10s)");
-                return null;
-            }
-
-            return pair.second;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            l.err(e.getMessage());
-            return null;
-        } finally {
-            awaiter.remove(uuid);
+    public void prepareStream(StreamProxy<?> sp) {
+        synchronized (lock) {
+            AwaitState s = new AwaitState();
+            s.isStream = true;
+            s.stream = sp;
+            awaiter.put(sp.uuid, s);
         }
+    }
+
+    public Object await(UUID uuid) throws InterruptedException {
+        AwaitState s = awaiter.get(uuid);
+        if (s == null) throw new IllegalStateException("No awaiters for UUID " + uuid + " was prepared!");
+        if (s.isStream) throw new IllegalStateException("Use awaitStream for stream " + uuid);
+
+        if (s.result != null) {
+            awaiter.remove(uuid);
+            return s.result;
+        }
+
+        s.timer.start();
+        boolean ok = s.latch.await(10, TimeUnit.SECONDS);
+        awaiter.remove(uuid);
+        if (!ok)
+            l.debug("WSS request [" + uuid + "] failed:");
+        return ok ? s.result : null;
+    }
+
+    public void awaitStream(UUID uuid) throws InterruptedException {
+        AwaitState s = awaiter.get(uuid);
+        if (s == null) throw new IllegalStateException("No awaiters for UUID " + uuid + " was prepared!");
+        if (!s.isStream) throw new IllegalStateException("not a stream " + uuid);
+        s.timer.start();
+        s.latch.await();
+        awaiter.remove(uuid);
     }
 
     public boolean pass(WSParcel parcel) {
-        if(parcel.getPayload() instanceof WSSResponse response) {
-            Pair<CountDownLatch, Object> pair = awaiter.get(parcel.getUuid());
-            if (pair == null) {
-                return false;
-            }
-
-            Object value;
-            if (response.getType() != null)
-                try {
-                    if (response.isSuccess())
-                        value = gson.fromJson(response.getData(), Class.forName(response.getType()));
-                    else
-                        value = new WSException(response.getData());
-
-                    pair.second = value;
-                } catch (ClassNotFoundException e) {
-                    pair.second = null;
-                    l.err("response class [" + response.getType() + "] was not found");
-                }
-            pair.first.countDown();
-            return true;
-        } else {
-            l.err("wrong payload ["+parcel.getPayloadType()+"] in WSSResponseRouter");
-            return  false;
+        if (!(parcel.getPayload() instanceof WSSResponse response)) {
+            l.err("wrong payload [" + parcel.getPayloadType() + "] in ResponseRouter");
+            return false;
         }
+        AwaitState s = awaiter.get(parcel.getUuid());
+        if (s == null) {
+            return false;
+        }
+
+        if (response.getType() == null)
+            return false;
+
+        Object value;
+        try {
+            if (response.isSuccess())
+                value = gson.fromJson(response.getData(), Class.forName(response.getType()));
+            else
+                value = new WSException(response.getData());
+        } catch (ClassNotFoundException e) {
+            l.err("response class [" + response.getType() + "] was not found");
+            return false;
+        }
+
+        if (s.isStream) {
+            return handleStream(s, response, value);
+        } else {
+            l.debug("took: " + s.timer.stop() + "ms");
+            s.result = value;
+            s.latch.countDown();
+        }
+        return true;
+    }
+
+    private boolean handleStream(AwaitState s, WSSResponse response, Object value) {
+        if (!(response instanceof WSPseudoStream stream)) {
+            s.stream.feedGeneric(new StreamChunk<>("Expected WSPseudoStream, got " + response.getClass().getSimpleName()));
+            s.latch.countDown();
+            return true;
+        }
+
+        StreamChunk<?> res;
+        if (response.isSuccess())
+            res = new StreamChunk<>(stream.isDone, value);
+        else
+            res = new StreamChunk<>(response.getData());
+        s.stream.feedGeneric(res);
+
+        if (stream.isDone)
+            s.latch.countDown();
+        return true;
+    }
+
+    static final class AwaitState {
+        final Timer timer = new Timer();
+        final CountDownLatch latch = new CountDownLatch(1);
+        volatile Object result;
+        volatile StreamProxy<?> stream;
+        volatile boolean isStream;
     }
 }

@@ -31,7 +31,7 @@ public final class LogBatch implements ILogBatch {
     }
 
     @Override
-    public void log(Object msg, String extra_info){
+    public void log(Object msg, String extra_info) {
         add(new LogEntry(msg.toString(), extra_info, null, Level.INFO));
     }
 
@@ -41,7 +41,7 @@ public final class LogBatch implements ILogBatch {
     }
 
     @Override
-    public void warn(Object msg, String extra_info){
+    public void warn(Object msg, String extra_info) {
         add(new LogEntry(msg.toString(), extra_info, null, Level.WARNING));
     }
 
@@ -57,7 +57,7 @@ public final class LogBatch implements ILogBatch {
 
     @Override
     public void err(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e, Level.ERROR));
+        add(new LogEntry(msg.toString(), null, e.toString(), Level.ERROR));
     }
 
     @Override
@@ -66,44 +66,46 @@ public final class LogBatch implements ILogBatch {
     }
 
     @Override
-    public void err(Object msg, String extra_info, Throwable e){
-        add(new LogEntry(msg.toString(), extra_info, e, Level.ERROR));
+    public void err(Object msg, String extra_info, Throwable e) {
+        add(new LogEntry(msg.toString(), extra_info, e.toString(), Level.ERROR));
     }
 
     @Override
-    public void flush(){
-        if(logs.isEmpty())
+    public void flush() {
+        if (logs.isEmpty())
             return;
         this.service.flushBatch(this);
     }
 
     @Override
-    public void flushIfLocal(){
-        if(isLocalBatch)
+    public void flushIfLocal() {
+        if (isLocalBatch)
             flush();
     }
 
     @Override
-    public void flushAndClear(){
+    public void flushAndClear() {
         flush();
         logs.clear();
     }
 
     @Override
-    public void clear(){
+    public void clear() {
         logs.clear();
     }
 
     @Override
-    public boolean isErrorPresent(){
+    public boolean isErrorPresent() {
         return logs.stream().anyMatch(l -> l.level() == Level.ERROR || l.level() == Level.FATAL);
     }
 
     @Override
-    public boolean isLocalBatch(){
+    public boolean isLocalBatch() {
         return isLocalBatch;
     }
 
     @Override
-    public String getID(){return uuid.toString();}
+    public String getID() {
+        return uuid.toString();
+    }
 }
