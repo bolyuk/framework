@@ -1,13 +1,14 @@
 package bl0.bjs.socket.services.proxy;
 
-import bl0.bjs.async.stream.StreamChunk;
+import bl0.bjs.common.async.stream.StreamChunk;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.time.Timer;
 import bl0.bjs.socket.base.IResponseAwaiter;
 import bl0.bjs.socket.core.parcel.WSParcel;
-import bl0.bjs.socket.core.parcel.payload.WSPseudoStream;
 import bl0.bjs.socket.core.parcel.payload.WSSResponse;
+import bl0.bjs.socket.core.parcel.payload.WSStream;
+import bl0.bjs.socket.services.proxy.stream.RemoteStreamProxy;
 import com.google.gson.Gson;
 
 import java.util.UUID;
@@ -22,6 +23,8 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
 
     private final Object lock = new Object();
 
+    public Thread wsThread;
+
     public WSSResponseRouter(IContext ctx) {
         super(ctx);
     }
@@ -34,7 +37,7 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         }
     }
 
-    public void prepareStream(StreamProxy<?> sp) {
+    public void prepareStream(RemoteStreamProxy<?> sp) {
         synchronized (lock) {
             AwaitState s = new AwaitState();
             s.isStream = true;
@@ -44,10 +47,10 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
     }
 
     public Object await(UUID uuid) throws InterruptedException {
+        throwIfWsThread(wsThread);
         AwaitState s = awaiter.get(uuid);
         if (s == null) throw new IllegalStateException("No awaiters for UUID " + uuid + " was prepared!");
         if (s.isStream) throw new IllegalStateException("Use awaitStream for stream " + uuid);
-
         if (s.result != null) {
             awaiter.remove(uuid);
             return s.result;
@@ -57,17 +60,17 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         boolean ok = s.latch.await(10, TimeUnit.SECONDS);
         awaiter.remove(uuid);
         if (!ok)
-            l.debug("WSS request [" + uuid + "] failed:");
+            l.debug("WSS request [" + uuid + "] failed");
         return ok ? s.result : null;
     }
 
     public void awaitStream(UUID uuid) throws InterruptedException {
+        throwIfWsThread(wsThread);
         AwaitState s = awaiter.get(uuid);
         if (s == null) throw new IllegalStateException("No awaiters for UUID " + uuid + " was prepared!");
         if (!s.isStream) throw new IllegalStateException("not a stream " + uuid);
         s.timer.start();
         s.latch.await();
-        awaiter.remove(uuid);
     }
 
     public boolean pass(WSParcel parcel) {
@@ -95,7 +98,7 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         }
 
         if (s.isStream) {
-            return handleStream(s, response, value);
+            return handleStream(s, response, value, parcel.getUuid());
         } else {
             l.debug("took: " + s.timer.stop() + "ms");
             s.result = value;
@@ -104,9 +107,15 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         return true;
     }
 
-    private boolean handleStream(AwaitState s, WSSResponse response, Object value) {
-        if (!(response instanceof WSPseudoStream stream)) {
+    private boolean handleStream(AwaitState s, WSSResponse response, Object value, UUID uuid) {
+        if (!(response instanceof WSStream stream)) {
             s.stream.feedGeneric(new StreamChunk<>("Expected WSPseudoStream, got " + response.getClass().getSimpleName()));
+            s.latch.countDown();
+            return true;
+        }
+
+        if (stream.isACK) {
+            l.debug("stream ack");
             s.latch.countDown();
             return true;
         }
@@ -118,8 +127,11 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
             res = new StreamChunk<>(response.getData());
         s.stream.feedGeneric(res);
 
-        if (stream.isDone)
-            s.latch.countDown();
+        if (stream.isDone) {
+            awaiter.remove(uuid);
+            l.debug("stream done");
+        }
+
         return true;
     }
 
@@ -127,7 +139,19 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
         final Timer timer = new Timer();
         final CountDownLatch latch = new CountDownLatch(1);
         volatile Object result;
-        volatile StreamProxy<?> stream;
+        volatile RemoteStreamProxy<?> stream;
         volatile boolean isStream;
+    }
+
+    private static void throwIfWsThread(Thread wsThread) {
+        if (wsThread == null)
+            return; // ws thread ещё не зафиксирован — ничего не проверяем
+
+        if (wsThread == Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Blocking operation is not permitted in WS thread [" +
+                            wsThread.getName() + "]"
+            );
+        }
     }
 }

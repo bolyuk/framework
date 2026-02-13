@@ -3,6 +3,7 @@ package bl0.bjs.async.queue;
 import bl0.bjs.async.AsyncExecutor;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
+import bl0.bjs.logging.ILogger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-public class Queue<T> extends BJSBaseClass {
+public class Queue<T> {
     private final ArrayList<T> data = new ArrayList<>();
     private final ArrayList<T> currentData = new ArrayList<>();
     private final BiConsumer<Queue<T>, List<T>> queueFunction;
@@ -22,6 +23,7 @@ public class Queue<T> extends BJSBaseClass {
     private int maxBatchSize = -1;
 
     private boolean async = true;
+    protected final ILogger l;
 
     private static final ScheduledExecutorService DELAY_EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(r -> {
@@ -34,7 +36,12 @@ public class Queue<T> extends BJSBaseClass {
     private ScheduledFuture<?> delayedStartFuture;
 
     public Queue(IContext ctx, BiConsumer<Queue<T>, List<T>> queueFunction) {
-        super(ctx);
+        l = ctx.generateLogger(Queue.class);
+        this.queueFunction = queueFunction;
+    }
+
+    public Queue(BiConsumer<Queue<T>, List<T>> queueFunction) {
+        l = null; // workaround to init in EventBus (because logger needs a EventBus to be generated -> recursive update)
         this.queueFunction = queueFunction;
     }
 
@@ -147,7 +154,10 @@ public class Queue<T> extends BJSBaseClass {
             try {
                 queueFunction.accept(this, batch);
             } catch (Exception e) {
-                l.err("Error processing queue: ", e);
+                if(l != null)
+                    l.err("Error processing queue: ", e);
+                else
+                    throw e; // why not?
             } finally {
                 synchronized (lock) {
                     currentData.clear();

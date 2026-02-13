@@ -21,6 +21,12 @@ public interface ILogBatch {
 
     void flush();
 
+    void debug(Object msg, String extra_info);
+
+    void debug(Object msg);
+
+    void debug(Object msg, Throwable e);
+
     void flushIfLocal();
 
     void flushAndClear();

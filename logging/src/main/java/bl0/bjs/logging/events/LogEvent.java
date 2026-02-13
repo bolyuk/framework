@@ -7,8 +7,6 @@ import bl0.bjs.logging.containers.LogEntry;
 import com.google.gson.annotations.Expose;
 
 public interface LogEvent extends IEventBusNode<LogEvent.LogPayload> {
-    record LogPayload(@Expose(serialize = false) Class<?> source,
-                      @Expose LogEntry entry,
-                      @Expose(serialize = false) ILogBatch batch) {
+    record LogPayload(Class<?> source, LogEntry entry, ILogBatch batch) {
     }
 }

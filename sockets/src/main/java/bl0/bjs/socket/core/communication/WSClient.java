@@ -104,6 +104,7 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
         l.debug("Connection opened");
+        responseRouter.wsThread = Thread.currentThread();
         socket = new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false);
         authorize();
         ctx.getServiceContainer().addExtender(this);

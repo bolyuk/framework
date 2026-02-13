@@ -78,6 +78,21 @@ public final class LogBatch implements ILogBatch {
     }
 
     @Override
+    public void debug(Object msg, String extra_info) {
+        add(new LogEntry(msg.toString(), extra_info, null, Level.DEBUG));
+    }
+
+    @Override
+    public void debug(Object msg) {
+        add(new LogEntry(msg.toString(), null, null, Level.DEBUG));
+    }
+
+    @Override
+    public void debug(Object msg, Throwable e) {
+        add(new LogEntry(msg.toString(), null, e.toString(), Level.DEBUG));
+    }
+
+    @Override
     public void flushIfLocal() {
         if (isLocalBatch)
             flush();

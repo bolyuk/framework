@@ -118,7 +118,7 @@ public class ServiceContainer implements IServiceContainer {
         context.getEventBus().getController(ServiceEvent.class)
                 .fireEvent(new ServiceEvent.ServicePayload(implClass, ServiceEvent.EventType.REGISTERED));
 
-        batch.log("Registered: " + implClass.getSimpleName() + " for service(s): " + joinContracts(exported));
+        batch.debug("Registered: " + implClass.getSimpleName() + " for service(s): " + joinContracts(exported));
         batch.flushAndClear();
         return true;
     }

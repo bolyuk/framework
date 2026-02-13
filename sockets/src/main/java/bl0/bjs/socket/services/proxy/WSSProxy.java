@@ -1,6 +1,6 @@
 package bl0.bjs.socket.services.proxy;
 
-import bl0.bjs.async.stream.IStream;
+import bl0.bjs.common.async.stream.IStream;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
 import bl0.bjs.socket.base.IResponseAwaiter;
@@ -8,6 +8,7 @@ import bl0.bjs.socket.core.data.NamedSocket;
 import bl0.bjs.socket.core.parcel.WSParcel;
 import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 import bl0.bjs.socket.services.IWebSocketService;
+import bl0.bjs.socket.services.proxy.stream.RemoteStreamProxy;
 import lombok.SneakyThrows;
 
 import java.lang.reflect.Method;
@@ -28,6 +29,10 @@ public class WSSProxy {
 
     @SneakyThrows
     private static Object proxyMethod(Method method, Object[] args, NamedSocket socket, Class<?> iface, ILogger l, IResponseAwaiter waiter, String name) {
+        if (method.getName().equals("toString")) {
+            return "WSSProxy [" + socket.getName() + "]";
+        }
+
         if (socket == null || socket.isClosed())
             throw new IllegalStateException("Socket is closed!");
 
@@ -63,7 +68,7 @@ public class WSSProxy {
             socket.send(parcel);
             return null;
         } else if (IStream.class == method.getReturnType()) {
-            var StreamProxy = new StreamProxy<>(socket, parcel.getUuid(), waiter, parcel);
+            var StreamProxy = new RemoteStreamProxy<>(socket, parcel.getUuid(), waiter, parcel);
             waiter.prepareStream(StreamProxy);
             return StreamProxy;
         } else {

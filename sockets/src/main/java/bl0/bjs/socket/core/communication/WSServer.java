@@ -154,6 +154,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
 
     @Override
     public void onStart() {
+        responseRouter.wsThread = Thread.currentThread();
         l.debug("Server started");
     }
 
