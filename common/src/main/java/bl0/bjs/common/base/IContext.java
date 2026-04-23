@@ -17,4 +17,7 @@ public interface IContext {
 
     IAsyncBus getAsyncBus();
 
+    void saveData(Object data);
+
+    <T> T getData(Class<T> clazz);
 }

@@ -10,7 +10,11 @@ import bl0.bjs.framework.eventbus.EventBus;
 import bl0.bjs.framework.files.LocalStorage;
 import bl0.bjs.framework.logging.DefaultLogger;
 
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class Context implements IContext {
+    public final ConcurrentHashMap<Class<?>, Object> extraData = new ConcurrentHashMap<>();
 
     public final EventBus eventBus = new EventBus();
     public final ServiceContainer services;
@@ -49,6 +53,19 @@ public class Context implements IContext {
     @Override
     public IAsyncBus getAsyncBus() {
         return asyncBus;
+    }
+
+    @Override
+    public void saveData(Object data) {
+        extraData.put(data.getClass(), data);
+    }
+
+    @Override
+    public <T> T getData(Class<T> clazz) {
+        var data = extraData.getOrDefault(clazz, null);
+        if(data == null)
+            throw new IllegalArgumentException(String.format("No such class %s", clazz.getName()));
+        return (T) data;
     }
 
 
