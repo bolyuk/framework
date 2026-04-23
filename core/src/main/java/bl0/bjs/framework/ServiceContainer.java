@@ -154,7 +154,7 @@ public class ServiceContainer implements IServiceContainer {
         if (contracts.isEmpty()) {
             batch.err("addSingleton: no IService contracts found for " + implClass.getName());
             batch.flushAndClear();
-            throw new IllegalStateException("No IService interfaces to register singleton under");
+            throw new IllegalStateException("No IService services to register singleton under");
         }
 
         Entry entry = new Entry((Class<? extends IService>) implClass, instance);
