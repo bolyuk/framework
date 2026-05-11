@@ -10,6 +10,8 @@ import bl0.bjs.logging.containers.LogEntry;
 import bl0.bjs.logging.events.LogBatchEvent;
 import bl0.bjs.logging.events.LogEvent;
 
+import java.time.Instant;
+
 public class DefaultLogger implements ILogger {
     final IEventBusController<LogEvent, LogEvent.LogPayload> everyLogController;
     final IEventBusController<LogBatchEvent, LogBatchEvent.LogPayload> batchLogController;
@@ -25,57 +27,57 @@ public class DefaultLogger implements ILogger {
 
     @Override
     public void log(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.INFO));
+        add(new LogEntry(msg.toString(), extra_info, null, Level.INFO, Instant.now()));
     }
 
     @Override
     public void log(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.INFO));
+        add(new LogEntry(msg.toString(), null, null, Level.INFO, Instant.now()));
     }
 
     @Override
     public void warn(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.WARNING));
+        add(new LogEntry(msg.toString(), extra_info, null, Level.WARNING, Instant.now()));
     }
 
     @Override
     public void warn(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.WARNING));
+        add(new LogEntry(msg.toString(), null, null, Level.WARNING, Instant.now()));
     }
 
     @Override
     public void err(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.ERROR));
+        add(new LogEntry(msg.toString(), null, null, Level.ERROR, Instant.now()));
     }
 
     @Override
     public void err(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e.toString(), Level.ERROR));
+        add(new LogEntry(msg.toString(), null, e.toString(), Level.ERROR, Instant.now()));
     }
 
     @Override
     public void err(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.ERROR));
+        add(new LogEntry(msg.toString(), extra_info, null, Level.ERROR, Instant.now()));
     }
 
     @Override
     public void err(Object msg, String extra_info, Throwable e) {
-        add(new LogEntry(msg.toString(), extra_info, e.toString(), Level.ERROR));
+        add(new LogEntry(msg.toString(), extra_info, e.toString(), Level.ERROR, Instant.now()));
     }
 
     @Override
     public void debug(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.DEBUG));
+        add(new LogEntry(msg.toString(), extra_info, null, Level.DEBUG, Instant.now()));
     }
 
     @Override
     public void debug(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.DEBUG));
+        add(new LogEntry(msg.toString(), null, null, Level.DEBUG, Instant.now()));
     }
 
     @Override
     public void debug(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e.toString(), Level.DEBUG));
+        add(new LogEntry(msg.toString(), null, e.toString(), Level.DEBUG, Instant.now()));
     }
 
     @Override

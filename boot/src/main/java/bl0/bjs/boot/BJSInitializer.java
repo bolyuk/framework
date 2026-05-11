@@ -10,6 +10,8 @@ import bl0.bjs.logging.events.LogEvent;
 import bl0.bjs.logging.utils.LogParser;
 
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 public class BJSInitializer {
     private final Context ctx;
@@ -46,21 +48,11 @@ public class BJSInitializer {
     }
 
     private void log(LogEvent.LogPayload data) {
-        String prefix = LogParser.getSimplePrefix(data.source());
-        String msg = data.entry().message();
-
-        //if extra msg is not too long, will be better to show it too...
-        if (data.entry().extra_info() != null && data.entry().extra_info().lines().count() == 1)
-            msg += " " + data.entry().extra_info();
-
-        if (data.entry().exception() != null)
-            msg += " " + data.entry().exception();
-
-        System.out.println(ctx.getHostname().toUpperCase() + ": " + prefix + " " + data.entry().level() + " - " + msg);
+        System.out.println(ctx.getHostname().toUpperCase()+" "+LogParser.parse(data));
     }
 
     private void catchExceptions(Thread t, Throwable e) {
-        logger.add(new LogEntry("Uncaught exception!", null, e.toString(), Level.FATAL));
+        logger.add(new LogEntry("Uncaught exception!", null, e.toString(), Level.FATAL, Instant.now()));
     }
 
     public static IContext defaultInit(String hostname) {
