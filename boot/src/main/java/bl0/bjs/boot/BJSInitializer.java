@@ -12,6 +12,7 @@ import bl0.bjs.logging.utils.LogParser;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 
 public class BJSInitializer {
     private final Context ctx;
@@ -52,7 +53,7 @@ public class BJSInitializer {
     }
 
     private void catchExceptions(Thread t, Throwable e) {
-        logger.add(new LogEntry("Uncaught exception!", null, e.toString(), Level.FATAL, Instant.now()));
+        logger.add(new LogEntry("Uncaught exception!", Arrays.toString(e.getStackTrace()), e.getMessage(), Level.FATAL, Instant.now()));
     }
 
     public static IContext defaultInit(String hostname) {
