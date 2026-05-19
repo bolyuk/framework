@@ -1,5 +1,6 @@
 package bl0.bjs.db.util;
 
+import bl0.bjs.db.interfaces.IBJSDBService;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
@@ -14,17 +15,17 @@ import java.util.function.Function;
 
 public class Table<T, ID extends Serializable> {
 
-    protected final BJSDB db;
+    protected final IBJSDBService db;
     protected final Class<T> entityClass;
     protected final Session session;
 
-    public Table(BJSDB db, Class<T> entityClass) {
+    public Table(IBJSDBService db, Class<T> entityClass) {
         this.db = db;
         this.entityClass = entityClass;
         this.session = null;
     }
 
-    public Table(BJSDB db, Class<T> entityClass, Session session) {
+    public Table(IBJSDBService db, Class<T> entityClass, Session session) {
         this.db = db;
         this.entityClass = entityClass;
         this.session = session;

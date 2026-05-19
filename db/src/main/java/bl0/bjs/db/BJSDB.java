@@ -1,15 +1,18 @@
 package bl0.bjs.db;
 
+import bl0.bjs.db.interfaces.IBJSDBService;
 import bl0.bjs.db.util.HibernateUtil;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.logging.ILogger;
+import bl0.bjs.services.Service;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 
 import java.util.function.Function;
 
-public class BJSDB {
+@Service(exportServices = IBJSDBService.class, isAutoBindingEnabled = false)
+public class BJSDB implements IBJSDBService {
     private final ILogger logger;
     private SessionFactory sessionFactory;
 
@@ -19,6 +22,10 @@ public class BJSDB {
 
     public void connect(String host, String dbName, String username, String password, String entitiesPath){
         sessionFactory = HibernateUtil.buildSessionFactory(host, dbName, username, password, entitiesPath);
+    }
+
+    public void connectSQLite(String file, String entitiesPath){
+        sessionFactory = HibernateUtil.buildSQLiteSessionFactory(file, entitiesPath);
     }
 
     public boolean isConnected(){

@@ -38,4 +38,57 @@ public class HibernateUtil {
             throw new RuntimeException("Failed to build SessionFactory", e);
         }
     }
+
+    public static SessionFactory buildSQLiteSessionFactory(
+            String databaseFile,
+            String entitiesPath
+    ) {
+        try {
+
+            Map<String, Object> settings = Map.of(
+                    "hibernate.connection.driver_class", "org.sqlite.JDBC",
+
+                    "hibernate.connection.url",
+                    "jdbc:sqlite:" + databaseFile,
+
+                    "hibernate.dialect",
+                    "org.hibernate.community.dialect.SQLiteDialect",
+
+                    "hibernate.hbm2ddl.auto", "update",
+
+                    // recommended for sqlite
+                    "hibernate.show_sql", false,
+                    "hibernate.format_sql", false,
+
+                    // sqlite concurrency quirks™
+                    "hibernate.connection.pool_size", 1
+            );
+
+            StandardServiceRegistry registry =
+                    new StandardServiceRegistryBuilder()
+                            .applySettings(settings)
+                            .build();
+
+            MetadataSources sources = new MetadataSources(registry);
+
+            Reflections reflections = new Reflections(entitiesPath);
+
+            var entities =
+                    reflections.getTypesAnnotatedWith(Entity.class);
+
+            for (Class<?> entity : entities) {
+                sources.addAnnotatedClass(entity);
+            }
+
+            return sources
+                    .buildMetadata()
+                    .buildSessionFactory();
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to build SQLite SessionFactory",
+                    e
+            );
+        }
+    }
 }
