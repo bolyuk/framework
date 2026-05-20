@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class EventBusController<T extends IEventBusNode<R>,R> implements IEventBusController<T, R> {
     private final Queue<R> queue;
     private final ConcurrentLinkedQueue<IEventBusNode<?>> node;
+    private volatile R sticky;
 
     public EventBusController(EventBus eventBus, Class<T> clazzT) {
         this.queue = new Queue<>(this::qFunction);
@@ -27,11 +28,15 @@ public class EventBusController<T extends IEventBusNode<R>,R> implements IEventB
     @Override
     public void subscribe(T node) {
         this.node.add(node);
+        if(sticky != null)
+            node.onEvent(sticky);
     }
 
     @Override
     public void subscribeGeneric(IEventBusNode<R> node) {
         this.node.add(node);
+        if(sticky != null)
+            node.onEvent(sticky);
     }
 
     @Override
@@ -42,5 +47,11 @@ public class EventBusController<T extends IEventBusNode<R>,R> implements IEventB
     @Override
     public void fireEvent(R data) {
         queue.pass(data);
+    }
+
+    @Override
+    public void fireSticky(R data) {
+        this.sticky = data;
+        fireEvent(data);
     }
 }

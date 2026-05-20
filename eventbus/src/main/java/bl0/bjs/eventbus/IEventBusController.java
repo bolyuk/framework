@@ -8,4 +8,6 @@ public interface IEventBusController<T extends IEventBusNode<R>, R> {
     void unsubscribe(T node);
 
     void fireEvent(R data);
+
+    void fireSticky(R data);
 }
