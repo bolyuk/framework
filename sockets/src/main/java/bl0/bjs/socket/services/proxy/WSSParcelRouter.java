@@ -52,7 +52,7 @@ public class WSSParcelRouter extends BJSBaseClass {
                 Class<?>[] paramTypes = resolveParamTypes(request.getParamTypes());
                 Object[] params = resolveParams(request.getParams(), paramTypes);
 
-                Method method = clazz.getMethod(request.getMethod(), paramTypes);
+                Method method = service.getClass().getMethod(request.getMethod(), paramTypes);
 
                 if (method.getReturnType().equals(IStream.class)) {
                     var returnStream = (IStream<?>) method.invoke(service, params);
@@ -64,22 +64,23 @@ public class WSSParcelRouter extends BJSBaseClass {
                         answerParcel.setPayload(new WSStream("ok", false, true));
                         l.debug("stream is bound");
 
-                        returnStream.bindCallback(chunk -> {
+                        returnStream.setAccumulator(chunk -> {
                             WSParcel p = new WSParcel();
                             p.setUuid(parcel.getUuid());
                             p.setFrom(name);
                             p.setTo(parcel.getFrom());
 
                             var ps = new WSStream(
-                                    GSON.toJson(chunk.data),
-                                    chunk.isDone,
+                                    GSON.toJson(chunk.first.data),
+                                    chunk.first.isDone,
                                     false
                             );
-                            ps.setType(chunk.data != null ? chunk.data.getClass().getName() : String.class.getName());
+                            ps.setType(chunk.first.data != null ? chunk.first.data.getClass().getName() : String.class.getName());
                             p.setPayload(ps);
                             socket.send(p);
 
-                            if (chunk.isDone) boundStreams.remove(parcel.getUuid());
+                            if (chunk.first.isDone) boundStreams.remove(parcel.getUuid());
+                            return null;
                         });
 
                         AsyncExecutor.register(returnStream::start);

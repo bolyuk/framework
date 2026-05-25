@@ -60,7 +60,7 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
 
     @Override
     public <T extends IWebSocketService> T get(Class<T> service) {
-        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), null, false), ctx, responseRouter, this.name);
+        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false), ctx, responseRouter, this.name);
     }
 
     @Override
@@ -135,7 +135,7 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
         AsyncExecutor.register(() -> {
             try {
                 Thread.sleep(500);
-                this.reconnectBlocking(); // или connectBlocking если клиент новый
+                this.reconnectBlocking();
             } catch (Exception e) {
                 l.err("Reconnect failed", e);
                 tryReconnect(tries - 1, s);

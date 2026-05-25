@@ -109,7 +109,7 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
 
     private boolean handleStream(AwaitState s, WSSResponse response, Object value, UUID uuid) {
         if (!(response instanceof WSStream stream)) {
-            s.stream.feedGeneric(new StreamChunk<>("Expected WSPseudoStream, got " + response.getClass().getSimpleName()));
+            s.stream.feedGeneric(new StreamChunk<>("Expected WSStream, got " + response.getClass().getSimpleName()));
             s.latch.countDown();
             return true;
         }

@@ -11,8 +11,7 @@ import bl0.bjs.socket.services.IWebSocketService;
 import bl0.bjs.socket.services.proxy.stream.RemoteStreamProxy;
 import lombok.SneakyThrows;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.*;
 import java.util.UUID;
 
 import static bl0.bjs.socket.C.GSON;
@@ -56,7 +55,7 @@ public class WSSProxy {
 
         for (int i = 0; i < len; i++) {
             params[i] = GSON.toJson(args[i]);
-            paramTypes[i] = method.getParameterTypes()[i].getName();
+            paramTypes[i] = resolveParamType(method, i, iface);
         }
 
         request.setParams(params);
@@ -79,5 +78,34 @@ public class WSSProxy {
                 throw t;
             return data;
         }
+    }
+
+    private static String resolveParamType(Method method, int index, Class<?> iface) {
+        Type paramTypeGeneric = method.getGenericParameterTypes()[index];
+
+        // если не TypeVariable — всё просто
+        if (!(paramTypeGeneric instanceof TypeVariable<?> tv))
+            return method.getParameterTypes()[index].getName();
+
+        // ищем реальный тип через iface
+        Type resolved = resolveTypeVariable(tv, iface);
+        return resolved != null ? resolved.getTypeName() : method.getParameterTypes()[index].getName();
+    }
+
+    private static Type resolveTypeVariable(TypeVariable<?> tv, Class<?> iface) {
+        for (Type superIface : iface.getGenericInterfaces()) {
+            if (!(superIface instanceof ParameterizedType pt)) continue;
+
+            Class<?> rawType = (Class<?>) pt.getRawType();
+            TypeVariable<?>[] typeParams = rawType.getTypeParameters();
+            Type[] typeArgs = pt.getActualTypeArguments();
+
+            for (int i = 0; i < typeParams.length; i++) {
+                if (typeParams[i].getName().equals(tv.getName())) {
+                    return typeArgs[i];
+                }
+            }
+        }
+        return null;
     }
 }

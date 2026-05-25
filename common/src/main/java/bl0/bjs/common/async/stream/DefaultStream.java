@@ -9,7 +9,6 @@ import java.util.function.Function;
 
 public class DefaultStream<T> implements IStream<T> {
     private T data;
-    private IStreamCallbackPipe callback;
 
     public final Action<DefaultStream<T>> work;
 
@@ -26,14 +25,8 @@ public class DefaultStream<T> implements IStream<T> {
         this.work = work;
     }
 
-    public void bindCallback(IStreamCallbackPipe callback) {
-        this.callback = callback;
-    }
-
     @Override
     public void feed(StreamChunk<T> data) {
-        if(callback != null)
-            callback.feed(data);
         if(accumulator != null)
             this.data = accumulator.apply(Pair.of(data, this.data));
 

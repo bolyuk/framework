@@ -2,7 +2,6 @@ package bl0.bjs.socket.services.proxy.stream;
 
 import bl0.bjs.common.async.stream.DefaultStream;
 import bl0.bjs.common.async.stream.IStream;
-import bl0.bjs.common.async.stream.IStreamCallbackPipe;
 import bl0.bjs.common.async.stream.StreamChunk;
 import bl0.bjs.common.core.event.action.Action;
 import bl0.bjs.common.core.tuple.Pair;
@@ -39,10 +38,5 @@ public class RemoteStreamProxy<T> extends DefaultStream<T> {
     public void start() {
         socket.send(parcel);
         awaiter.awaitStream(this.uuid);
-    }
-
-    @Override
-    public void bindCallback(IStreamCallbackPipe callback) {
-        throw new UnsupportedOperationException("Not supported.");
     }
 }

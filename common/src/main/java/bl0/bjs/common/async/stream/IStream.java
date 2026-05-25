@@ -6,13 +6,11 @@ import bl0.bjs.common.core.tuple.Pair;
 import java.util.function.Function;
 
 public interface IStream<T> {
-    void feed(StreamChunk<T> data);
+    void feed(StreamChunk<T> data); // host method
 
     void cancel();
 
     void start();
-
-    void bindCallback(IStreamCallbackPipe callback);
 
     void setAccumulator(Function<Pair<StreamChunk<T>, T>, T> accumulator);
 
