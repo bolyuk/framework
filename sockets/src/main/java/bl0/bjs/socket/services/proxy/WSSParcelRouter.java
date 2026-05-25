@@ -10,7 +10,6 @@ import bl0.bjs.socket.core.parcel.payload.WSStream;
 import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 import bl0.bjs.socket.core.parcel.payload.WSSResponse;
 import bl0.bjs.socket.services.IWebSocketService;
-import bl0.bjs.socket.services.proxy.stream.RemoteStreamController;
 
 import java.lang.reflect.Method;
 import java.util.UUID;
@@ -64,17 +63,13 @@ public class WSSParcelRouter extends BJSBaseClass {
                         boundStreams.put(parcel.getUuid(), returnStream);
                         answerParcel.setPayload(new WSStream("ok", false, true));
                         l.debug("stream is bound");
-                    }
 
-                    if (returnStream instanceof RemoteStreamController<?> c) {
-                        c.bindWS(chunk -> {
-                            // chunk: StreamChunk<?>
+                        returnStream.bindCallback(chunk -> {
                             WSParcel p = new WSParcel();
                             p.setUuid(parcel.getUuid());
                             p.setFrom(name);
                             p.setTo(parcel.getFrom());
 
-                            // упакуй как WSPseudoStream
                             var ps = new WSStream(
                                     GSON.toJson(chunk.data),
                                     chunk.isDone,
@@ -87,10 +82,7 @@ public class WSSParcelRouter extends BJSBaseClass {
                             if (chunk.isDone) boundStreams.remove(parcel.getUuid());
                         });
 
-                        AsyncExecutor.register(c::start); // или executor.submit(...)
-                    } else {
-                        l.warn("returnStream is not RemoteStreamController");
-                        // тогда он никогда ничего не пошлёт, логично
+                        AsyncExecutor.register(returnStream::start);
                     }
                 } else {
                     answerPayload.setData(GSON.toJson(method.invoke(service, params)));

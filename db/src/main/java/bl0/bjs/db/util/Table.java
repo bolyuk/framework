@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.function.Function;
 
-public class Table<T, ID extends Serializable> {
+public class Table<ID extends Serializable, T extends HasID<ID>> {
 
     protected final IBJSDBService db;
     protected final Class<T> entityClass;
@@ -154,9 +154,5 @@ public class Table<T, ID extends Serializable> {
             params.forEach(q::setParameter);
             return q.getResultList();
         });
-    }
-
-    public static <R,B extends Serializable> Table<R, B> build(Class<R> r, Class<B> b, BJSDB db, Session session) {
-        return new Table<R, B>(db, r, session);
     }
 }

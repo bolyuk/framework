@@ -145,7 +145,7 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
 
     private static void throwIfWsThread(Thread wsThread) {
         if (wsThread == null)
-            return; // ws thread ещё не зафиксирован — ничего не проверяем
+            return;
 
         if (wsThread == Thread.currentThread()) {
             throw new IllegalStateException(

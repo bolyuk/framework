@@ -1,6 +1,8 @@
 package bl0.bjs.socket.services.proxy.stream;
 
+import bl0.bjs.common.async.stream.DefaultStream;
 import bl0.bjs.common.async.stream.IStream;
+import bl0.bjs.common.async.stream.IStreamCallbackPipe;
 import bl0.bjs.common.async.stream.StreamChunk;
 import bl0.bjs.common.core.event.action.Action;
 import bl0.bjs.common.core.tuple.Pair;
@@ -13,21 +15,14 @@ import lombok.SneakyThrows;
 import java.util.UUID;
 import java.util.function.Function;
 
-public class RemoteStreamProxy<T> implements IStream<T> {
-    private T data;
+public class RemoteStreamProxy<T> extends DefaultStream<T> {
     public final UUID uuid;
     private final NamedSocket socket;
     private final IResponseAwaiter awaiter;
     private final WSParcel parcel;
 
-
-    @Setter
-    private Function<Pair<StreamChunk<T>, T>, T> accumulator;
-
-    @Setter
-    private Action<T> deltaListener;
-
     public RemoteStreamProxy(NamedSocket socket, UUID uuid, IResponseAwaiter awaiter, WSParcel parcel) {
+        super(null);
         this.socket = socket;
         this.uuid = uuid;
         this.awaiter = awaiter;
@@ -35,21 +30,8 @@ public class RemoteStreamProxy<T> implements IStream<T> {
     }
 
     @Override
-    public void feed(StreamChunk<T> data) {
-        if(accumulator != null)
-            this.data = accumulator.apply(Pair.of(data, this.data));
-
-        if(deltaListener != null)
-            deltaListener.invoke(data.data);
-    }
-
-    public void feedGeneric(StreamChunk<?> data) {
-        feed((StreamChunk<T>) data);
-    }
-
-    @Override //TODO
     public void cancel() {
-        throw  new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("Not supported.");
     }
 
     @SneakyThrows
@@ -57,5 +39,10 @@ public class RemoteStreamProxy<T> implements IStream<T> {
     public void start() {
         socket.send(parcel);
         awaiter.awaitStream(this.uuid);
+    }
+
+    @Override
+    public void bindCallback(IStreamCallbackPipe callback) {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

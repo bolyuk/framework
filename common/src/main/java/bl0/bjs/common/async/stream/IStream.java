@@ -12,6 +12,8 @@ public interface IStream<T> {
 
     void start();
 
+    void bindCallback(IStreamCallbackPipe callback);
+
     void setAccumulator(Function<Pair<StreamChunk<T>, T>, T> accumulator);
 
     void setDeltaListener(Action<T> deltaListener);
