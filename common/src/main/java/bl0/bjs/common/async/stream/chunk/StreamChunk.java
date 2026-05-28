@@ -1,4 +1,4 @@
-package bl0.bjs.common.async.stream;
+package bl0.bjs.common.async.stream.chunk;
 
 public class StreamChunk<T> {
     public final boolean isFaulted;

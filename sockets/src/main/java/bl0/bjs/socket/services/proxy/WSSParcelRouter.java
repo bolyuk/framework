@@ -10,9 +10,14 @@ import bl0.bjs.socket.core.parcel.payload.WSStream;
 import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 import bl0.bjs.socket.core.parcel.payload.WSSResponse;
 import bl0.bjs.socket.services.IWebSocketService;
+import com.google.gson.reflect.TypeToken;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Method;
-import java.util.UUID;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static bl0.bjs.socket.C.GSON;
@@ -49,10 +54,10 @@ public class WSSParcelRouter extends BJSBaseClass {
                     throw new NullPointerException(request.getPath() + " does not exist");
 
 
-                Class<?>[] paramTypes = resolveParamTypes(request.getParamTypes());
-                Object[] params = resolveParams(request.getParams(), paramTypes);
+                ResolvedParams resolvedParams = resolveParamTypes(request.getParamTypes());
+                Object[] params = resolveParams(request.getParams(), resolvedParams.gsonTypes());
 
-                Method method = service.getClass().getMethod(request.getMethod(), paramTypes);
+                Method method = service.getClass().getMethod(request.getMethod(), resolvedParams.rawTypes());
 
                 if (method.getReturnType().equals(IStream.class)) {
                     var returnStream = (IStream<?>) method.invoke(service, params);
@@ -70,12 +75,13 @@ public class WSSParcelRouter extends BJSBaseClass {
                             p.setFrom(name);
                             p.setTo(parcel.getFrom());
 
+                            var data = chunk.first.data;
                             var ps = new WSStream(
-                                    GSON.toJson(chunk.first.data),
+                                    data,
                                     chunk.first.isDone,
                                     false
                             );
-                            ps.setType(chunk.first.data != null ? chunk.first.data.getClass().getName() : String.class.getName());
+                            ps.setType(resolveReturnType(method, clazz, Map.of(IStream.class, IStream.class)).getClass().getTypeParameters()[0].getClass().getTypeParameters()[0].getName());
                             p.setPayload(ps);
                             socket.send(p);
 
@@ -96,7 +102,7 @@ public class WSSParcelRouter extends BJSBaseClass {
                     socket.send(answerParcel);
                 }
             } catch (Exception e) {
-                l.err(e);
+                l.err(e.getMessage(), Arrays.toString(e.getStackTrace()), e);
                 answerPayload.setSuccess(false);
                 answerPayload.setData(GSON.toJson(e.getMessage()));
                 answerPayload.setType(String.class.getName());
@@ -108,18 +114,91 @@ public class WSSParcelRouter extends BJSBaseClass {
         }
     }
 
-    private Class<?>[] resolveParamTypes(String[] paramTypes) throws ClassNotFoundException {
-        if (paramTypes == null)
-            return new Class<?>[0];
+    private static String resolveReturnType(Method method, Class<?> iface, Map<Class<?>, Class<?>> overrides) {
+        Type returnTypeGeneric = method.getGenericReturnType();
 
-        Class<?>[] types = new Class<?>[paramTypes.length];
-        for (int i = 0; i < paramTypes.length; i++) {
-            types[i] = Class.forName(paramTypes[i]);
+        if (returnTypeGeneric instanceof TypeVariable<?> tv) {
+            Type resolved = resolveTypeVariable(tv, iface);
+            return resolved != null ? normalizeTypeName(resolved) : classToName(method.getReturnType());
         }
-        return types;
+
+        if (returnTypeGeneric instanceof ParameterizedType pt) {
+            return resolveParameterizedType(pt, iface, overrides);
+        }
+
+        Class<?> ret = method.getReturnType();
+        return classToName(overrides.getOrDefault(ret, ret));
     }
 
-    private Object[] resolveParams(String[] params, Class<?>[] types) {
+    private static String resolveParameterizedType(ParameterizedType pt, Class<?> iface, Map<Class<?>, Class<?>> overrides) {
+        Class<?> raw = (Class<?>) pt.getRawType();
+        Class<?> effectiveRaw = overrides.getOrDefault(raw, raw); // заменяем только если есть в map
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(classToName(effectiveRaw)).append("<");
+
+        Type[] args = pt.getActualTypeArguments();
+        for (int i = 0; i < args.length; i++) {
+            if (i > 0) sb.append(", ");
+            Type arg = args[i];
+
+            if (arg instanceof TypeVariable<?> tv) {
+                Type resolved = resolveTypeVariable(tv, iface);
+                sb.append(resolved != null ? normalizeTypeName(resolved) : tv.getName());
+            } else if (arg instanceof ParameterizedType nested) {
+                sb.append(resolveParameterizedType(nested, iface, overrides));
+            } else {
+                sb.append(normalizeTypeName(arg));
+            }
+        }
+
+        return sb.append(">").toString();
+    }
+
+    private static Type resolveTypeVariable(TypeVariable<?> tv, Class<?> iface) {
+        for (Type superIface : iface.getGenericInterfaces()) {
+            if (!(superIface instanceof ParameterizedType pt)) continue;
+
+            Class<?> rawType = (Class<?>) pt.getRawType();
+            TypeVariable<?>[] typeParams = rawType.getTypeParameters();
+            Type[] typeArgs = pt.getActualTypeArguments();
+
+            for (int i = 0; i < typeParams.length; i++) {
+                if (typeParams[i].getName().equals(tv.getName())) {
+                    return typeArgs[i];
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeTypeName(Type type) {
+        return type.getTypeName().replace('$', '.');
+    }
+
+    private static String classToName(Class<?> clazz) {
+        return clazz.getName().replace('$', '.');
+    }
+
+    private record ResolvedParams(Class<?>[] rawTypes, java.lang.reflect.Type[] gsonTypes) {}
+
+    private ResolvedParams resolveParamTypes(String[] paramTypes) throws ClassNotFoundException {
+        if (paramTypes == null)
+            return new ResolvedParams(new Class<?>[0], new java.lang.reflect.Type[0]);
+
+        Class<?>[] rawTypes = new Class<?>[paramTypes.length];
+        java.lang.reflect.Type[] gsonTypes = new java.lang.reflect.Type[paramTypes.length];
+
+        for (int i = 0; i < paramTypes.length; i++) {
+            WSSResponseRouter.ResolvedType resolved = decodeTypeString(paramTypes[i], getClass().getClassLoader());
+            rawTypes[i] = resolved.rawClass();
+            gsonTypes[i] = toGsonType(resolved);
+        }
+
+        return new ResolvedParams(rawTypes, gsonTypes);
+    }
+
+    private Object[] resolveParams(String[] params, java.lang.reflect.Type[] types) {
         if (params == null)
             return new Object[0];
 
@@ -128,5 +207,79 @@ public class WSSParcelRouter extends BJSBaseClass {
             objects[i] = GSON.fromJson(params[i], types[i]);
         }
         return objects;
+    }
+
+    private static java.lang.reflect.Type toGsonType(WSSResponseRouter.ResolvedType resolved) {
+        if (!resolved.isParameterized()) {
+            return resolved.rawClass();
+        }
+
+        Type[] argTypes = resolved.typeArgs().stream()
+                .map(WSSParcelRouter::toGsonType)
+                .toArray(Type[]::new);
+
+        return TypeToken.getParameterized(resolved.rawClass(), argTypes).getType();
+    }
+
+    public static WSSResponseRouter.ResolvedType decodeTypeString(String typeName, ClassLoader cl) throws ClassNotFoundException {
+        typeName = typeName.trim();
+
+        int lt = typeName.indexOf('<');
+        if (lt == -1) {
+            // простой тип
+            Class<?> clazz = loadClass(typeName, cl);
+            return new WSSResponseRouter.ResolvedType(clazz, Collections.emptyList());
+        }
+
+        String rawName = typeName.substring(0, lt);
+        String argsStr = typeName.substring(lt + 1, typeName.length() - 1); // убираем < >
+
+        Class<?> rawClass = loadClass(rawName, cl);
+        List<WSSResponseRouter.ResolvedType> args = splitTypeArgs(argsStr).stream()
+                .map(arg -> {
+                    try {
+                        return decodeTypeString(arg, cl);
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .toList();
+
+        return new WSSResponseRouter.ResolvedType(rawClass, args);
+    }
+
+    private static List<String> splitTypeArgs(String args) {
+        List<String> result = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < args.length(); i++) {
+            char c = args.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ',' && depth == 0) {
+                result.add(args.substring(start, i).trim());
+                start = i + 1;
+            }
+        }
+        result.add(args.substring(start).trim());
+        return result;
+    }
+
+    private static Class<?> loadClass(String name, ClassLoader cl) throws ClassNotFoundException {
+        try {
+            return Class.forName(name, false, cl);
+        } catch (ClassNotFoundException ignored) {}
+
+        char[] chars = name.toCharArray();
+        for (int i = chars.length - 1; i >= 0; i--) {
+            if (chars[i] == '.') {
+                chars[i] = '$';
+                try {
+                    return Class.forName(new String(chars), false, cl);
+                } catch (ClassNotFoundException ignored) {}
+            }
+        }
+
+        throw new ClassNotFoundException("Cannot resolve class: " + name);
     }
 }

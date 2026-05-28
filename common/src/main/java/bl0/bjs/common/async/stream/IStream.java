@@ -1,5 +1,6 @@
 package bl0.bjs.common.async.stream;
 
+import bl0.bjs.common.async.stream.chunk.StreamChunk;
 import bl0.bjs.common.core.event.action.Action;
 import bl0.bjs.common.core.tuple.Pair;
 

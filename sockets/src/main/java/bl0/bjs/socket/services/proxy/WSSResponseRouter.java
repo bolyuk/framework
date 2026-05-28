@@ -1,6 +1,6 @@
 package bl0.bjs.socket.services.proxy;
 
-import bl0.bjs.common.async.stream.StreamChunk;
+import bl0.bjs.common.async.stream.chunk.StreamChunk;
 import bl0.bjs.common.base.BJSBaseClass;
 import bl0.bjs.common.base.IContext;
 import bl0.bjs.common.core.time.Timer;
@@ -10,11 +10,17 @@ import bl0.bjs.socket.core.parcel.payload.WSSResponse;
 import bl0.bjs.socket.core.parcel.payload.WSStream;
 import bl0.bjs.socket.services.proxy.stream.RemoteStreamProxy;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter {
 
@@ -88,8 +94,13 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
 
         Object value;
         try {
-            if (response.isSuccess())
-                value = gson.fromJson(response.getData(), Class.forName(response.getType()));
+            if (response.isSuccess()){
+                java.lang.reflect.Type gsonType = toGsonType(
+                        decodeTypeString(response.getType(), getClass().getClassLoader())
+                );
+
+                value = gson.fromJson(response.getData(), gsonType);
+            }
             else
                 value = new WSException(response.getData());
         } catch (ClassNotFoundException e) {
@@ -152,6 +163,97 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
                     "Blocking operation is not permitted in WS thread [" +
                             wsThread.getName() + "]"
             );
+        }
+    }
+
+    private static java.lang.reflect.Type toGsonType(ResolvedType resolved) {
+        if (!resolved.isParameterized()) {
+            return resolved.rawClass();
+        }
+
+        Type[] argTypes = resolved.typeArgs().stream()
+                .map(WSSResponseRouter::toGsonType)
+                .toArray(Type[]::new);
+
+        return TypeToken.getParameterized(resolved.rawClass(), argTypes).getType();
+    }
+
+    public static ResolvedType decodeTypeString(String typeName, ClassLoader cl) throws ClassNotFoundException {
+        typeName = typeName.trim();
+
+        int lt = typeName.indexOf('<');
+        if (lt == -1) {
+            // простой тип
+            Class<?> clazz = loadClass(typeName, cl);
+            return new ResolvedType(clazz, Collections.emptyList());
+        }
+
+        String rawName = typeName.substring(0, lt);
+        String argsStr = typeName.substring(lt + 1, typeName.length() - 1); // убираем < >
+
+        Class<?> rawClass = loadClass(rawName, cl);
+        List<ResolvedType> args = splitTypeArgs(argsStr).stream()
+                .map(arg -> {
+                    try {
+                        return decodeTypeString(arg, cl);
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .toList();
+
+        return new ResolvedType(rawClass, args);
+    }
+
+    /** Разбивает "A<B<C>, D>" на ["A<B<C>>", "D"] — учитывает вложенность. */
+    private static List<String> splitTypeArgs(String args) {
+        List<String> result = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < args.length(); i++) {
+            char c = args.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ',' && depth == 0) {
+                result.add(args.substring(start, i).trim());
+                start = i + 1;
+            }
+        }
+        result.add(args.substring(start).trim());
+        return result;
+    }
+
+    private static Class<?> loadClass(String name, ClassLoader cl) throws ClassNotFoundException {
+        try {
+            return Class.forName(name, false, cl);
+        } catch (ClassNotFoundException ignored) {}
+
+        // Перебираем все точки справа налево, заменяя на $
+        // IStreamDataSource.RangeChunk -> IStreamDataSource$RangeChunk
+        char[] chars = name.toCharArray();
+        for (int i = chars.length - 1; i >= 0; i--) {
+            if (chars[i] == '.') {
+                chars[i] = '$';
+                try {
+                    return Class.forName(new String(chars), false, cl);
+                } catch (ClassNotFoundException ignored) {}
+            }
+        }
+
+        throw new ClassNotFoundException("Cannot resolve class: " + name);
+    }
+
+    /** Простой контейнер результата. */
+    public record ResolvedType(Class<?> rawClass, List<ResolvedType> typeArgs) {
+        public boolean isParameterized() { return !typeArgs.isEmpty(); }
+
+        /** Восстанавливает строку обратно (для логов/отладки). */
+        @Override
+        public String toString() {
+            if (typeArgs.isEmpty()) return rawClass.getName().replace('$', '.');
+            return rawClass.getName().replace('$', '.') + "<" +
+                    typeArgs.stream().map(ResolvedType::toString).collect(Collectors.joining(", ")) +
+                    ">";
         }
     }
 }

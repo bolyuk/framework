@@ -10,6 +10,7 @@ import bl0.bjs.socket.core.parcel.payload.WSSRequest;
 import bl0.bjs.socket.services.IWebSocketService;
 import bl0.bjs.socket.services.proxy.stream.RemoteStreamProxy;
 import lombok.SneakyThrows;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.*;
 import java.util.UUID;
@@ -83,13 +84,47 @@ public class WSSProxy {
     private static String resolveParamType(Method method, int index, Class<?> iface) {
         Type paramTypeGeneric = method.getGenericParameterTypes()[index];
 
-        // если не TypeVariable — всё просто
-        if (!(paramTypeGeneric instanceof TypeVariable<?> tv))
-            return method.getParameterTypes()[index].getName();
+        if (paramTypeGeneric instanceof TypeVariable<?> tv) {
+            Type resolved = resolveTypeVariable(tv, iface);
+            return resolved != null ? normalizeTypeName(resolved) : classToName(method.getParameterTypes()[index]);
+        }
 
-        // ищем реальный тип через iface
-        Type resolved = resolveTypeVariable(tv, iface);
-        return resolved != null ? resolved.getTypeName() : method.getParameterTypes()[index].getName();
+        if (paramTypeGeneric instanceof ParameterizedType pt) {
+            return resolveParameterizedType(pt, iface, null);
+        }
+
+        return classToName(method.getParameterTypes()[index]);
+    }
+
+    private static String resolveParameterizedType(ParameterizedType pt, Class<?> iface, @Nullable Class<?> rawOverride) {
+        Class<?> raw = rawOverride != null ? rawOverride : (Class<?>) pt.getRawType();
+        StringBuilder sb = new StringBuilder();
+        sb.append(classToName(raw)).append("<");
+
+        Type[] args = pt.getActualTypeArguments();
+        for (int i = 0; i < args.length; i++) {
+            if (i > 0) sb.append(", ");
+            Type arg = args[i];
+
+            if (arg instanceof TypeVariable<?> tv) {
+                Type resolved = resolveTypeVariable(tv, iface);
+                sb.append(resolved != null ? normalizeTypeName(resolved) : tv.getName());
+            } else if (arg instanceof ParameterizedType nested) {
+                sb.append(resolveParameterizedType(nested, iface, null));
+            } else {
+                sb.append(normalizeTypeName(arg));
+            }
+        }
+
+        return sb.append(">").toString();
+    }
+
+    private static String normalizeTypeName(Type type) {
+        return type.getTypeName().replace('$', '.');
+    }
+
+    private static String classToName(Class<?> clazz) {
+        return clazz.getName().replace('$', '.');
     }
 
     private static Type resolveTypeVariable(TypeVariable<?> tv, Class<?> iface) {
