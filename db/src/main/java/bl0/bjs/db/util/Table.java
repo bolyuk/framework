@@ -35,6 +35,10 @@ public class Table<ID extends Serializable, T extends HasID<ID>> {
         return db.transaction(session,s -> Optional.ofNullable(s.find(entityClass, id)));
     }
 
+    public List<T> findByIds(List<ID> ids) {
+        return db.transaction(session, s -> s.findMultiple(entityClass, ids));
+    }
+
     public List<T> findAll() {
         return db.transaction(session,s ->
                 s.createQuery("from " + entityClass.getSimpleName(), entityClass)

@@ -81,7 +81,7 @@ public class WSSParcelRouter extends BJSBaseClass {
                                     chunk.first.isDone,
                                     false
                             );
-                            ps.setType(resolveReturnType(method, clazz, Map.of(IStream.class, IStream.class)).getClass().getTypeParameters()[0].getClass().getTypeParameters()[0].getName());
+                            ps.setType(data.getClass().getName());
                             p.setPayload(ps);
                             socket.send(p);
 
@@ -95,14 +95,14 @@ public class WSSParcelRouter extends BJSBaseClass {
                     answerPayload.setData(GSON.toJson(method.invoke(service, params)));
                 }
 
-                answerPayload.setType(method.getReturnType().getName());
+                answerPayload.setType(resolveReturnType(method, clazz, Map.of()));
                 answerPayload.setSuccess(true);
 
                 if (method.getReturnType() != Void.TYPE) {
                     socket.send(answerParcel);
                 }
             } catch (Exception e) {
-                l.err(e.getMessage(), Arrays.toString(e.getStackTrace()), e);
+                l.err(e.toString(), Arrays.toString(e.getStackTrace()), e);
                 answerPayload.setSuccess(false);
                 answerPayload.setData(GSON.toJson(e.getMessage()));
                 answerPayload.setType(String.class.getName());

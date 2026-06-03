@@ -16,6 +16,7 @@ import bl0.bjs.socket.core.parcel.WSParcel;
 import bl0.bjs.socket.core.parcel.payload.WSSEvent;
 import bl0.bjs.socket.core.parcel.payload.auth.WSSAuth;
 import bl0.bjs.socket.services.IWebSocketService;
+import bl0.bjs.socket.services.proxy.WSInvocationHandler;
 import bl0.bjs.socket.services.proxy.WSSParcelRouter;
 import bl0.bjs.socket.services.proxy.WSSProxy;
 import bl0.bjs.socket.services.proxy.WSSResponseRouter;
@@ -44,6 +45,8 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
 
     protected final QueuePool<String, ParcelQueue.QueueContainer, ParcelQueue> queuePool;
 
+    protected final ArrayList<WSInvocationHandler> boundServices = new  ArrayList<>();
+
     public WSClient(IContext context, URI serverUri, String name) {
         super(serverUri);
         this.name = name;
@@ -60,12 +63,16 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
 
     @Override
     public <T extends IWebSocketService> T get(Class<T> service) {
-        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false), ctx, responseRouter, this.name);
+        var bound = WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false), ctx, responseRouter, this.name);
+        boundServices.add(bound.second);
+        return bound.first;
     }
 
     @Override
     public <T extends IWebSocketService> T getNamed(Class<T> service, String name) {
-        return WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), name, false), ctx, responseRouter, this.name);
+        var bound = WSSProxy.bind(service, new NamedSocket(ctx, getConnection(), name, false), ctx, responseRouter, this.name);
+        boundServices.add(bound.second);
+        return bound.first;
     }
 
     @Override //TODO
@@ -117,11 +124,7 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
     @Override
     public void onClose(int i, String s, boolean b) {
         socket = null;
-        onDisconnected();
         tryReconnect(10, s);
-    }
-
-    private void onDisconnected() {
     }
 
     private void tryReconnect(int tries, String s) {
@@ -141,6 +144,15 @@ public class WSClient extends WebSocketClient implements IWSBase, IServiceExtend
                 tryReconnect(tries - 1, s);
             }
         });
+    }
+
+    private void rebindServices(){
+        if(boundServices.isEmpty())
+            return;
+        l.debug("Rebinding services, count - " + boundServices.size());
+        for(var service : boundServices){
+            service.rebindSocket(new NamedSocket(ctx, getConnection(), NamedSocket.SERVER, false));
+        }
     }
 
     @SneakyThrows

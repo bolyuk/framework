@@ -63,7 +63,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
             l.warn(service.getName() + " not found");
             return null;
         }
-        return WSSProxy.bind(service, client, ctx, responseRouter, null);
+        return WSSProxy.bind(service, client, ctx, responseRouter, null).first;
     }
 
     @Override
@@ -73,7 +73,7 @@ public class WSServer extends WebSocketServer implements IWSBase {
             l.warn("Named service " + service.getName() + " not found");
             return null;
         }
-        return WSSProxy.bind(service, client, ctx, responseRouter, NamedSocket.SERVER);
+        return WSSProxy.bind(service, client, ctx, responseRouter, NamedSocket.SERVER).first;
     }
 
     @Override //TODO
