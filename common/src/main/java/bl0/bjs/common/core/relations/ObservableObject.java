@@ -3,11 +3,11 @@ package bl0.bjs.common.core.relations;
 import bl0.bjs.common.core.event.action.Action;
 import bl0.bjs.common.core.event.action.ActionController;
 
-public class NotifyObject<T> implements INotifier<NotifyObject<T>, T> {
+public class ObservableObject<T> implements IObservable<ObservableObject<T>, T> {
     private T object;
     private final ActionController<T> controller = new ActionController<T>();
 
-    public NotifyObject(T object) {
+    public ObservableObject(T object) {
         this.object = object;
     }
 
@@ -15,26 +15,26 @@ public class NotifyObject<T> implements INotifier<NotifyObject<T>, T> {
         return this.object;
     }
 
-    public NotifyObject<T> set(T object) {
+    public ObservableObject<T> set(T object) {
         this.object = object;
-        this.invoke();
+        this.invokeChangeAction();
         return this;
     }
 
     @Override
-    public NotifyObject<T> addListener(Action<T> e) {
+    public ObservableObject<T> addListener(Action<T> e) {
         controller.register(e);
         return this;
     }
 
     @Override
-    public NotifyObject<T> remListener(Action<T> e) {
+    public ObservableObject<T> remListener(Action<T> e) {
         controller.unregister(e);
         return this;
     }
 
     @Override
-    public NotifyObject<T> invoke() {
+    public ObservableObject<T> invokeChangeAction() {
         controller.invoke(object);
         return this;
     }

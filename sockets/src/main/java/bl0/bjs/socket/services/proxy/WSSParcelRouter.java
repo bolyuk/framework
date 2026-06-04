@@ -57,7 +57,7 @@ public class WSSParcelRouter extends BJSBaseClass {
                 ResolvedParams resolvedParams = resolveParamTypes(request.getParamTypes());
                 Object[] params = resolveParams(request.getParams(), resolvedParams.gsonTypes());
 
-                Method method = service.getClass().getMethod(request.getMethod(), resolvedParams.rawTypes());
+                Method method = resolveMethod(service.getClass(), request.getMethod(), resolvedParams.rawTypes());
 
                 if (method.getReturnType().equals(IStream.class)) {
                     var returnStream = (IStream<?>) method.invoke(service, params);
@@ -128,6 +128,38 @@ public class WSSParcelRouter extends BJSBaseClass {
 
         Class<?> ret = method.getReturnType();
         return classToName(overrides.getOrDefault(ret, ret));
+    }
+
+    private static Method resolveMethod(Class<?> clazz, String methodName, Class<?>[] argTypes)
+            throws NoSuchMethodException {
+
+        // 1. Сначала пробуем точное совпадение (быстрый путь)
+        try {
+            return clazz.getMethod(methodName, argTypes);
+        } catch (NoSuchMethodException ignored) {}
+
+        // 2. Ищем по имени + количеству аргументов + assignability
+        for (Method m : clazz.getMethods()) {
+            if (!m.getName().equals(methodName)) continue;
+
+            Class<?>[] params = m.getParameterTypes();
+            if (params.length != argTypes.length) continue;
+
+            boolean match = true;
+            for (int i = 0; i < params.length; i++) {
+                // UUID assignable to Serializable — ок
+                // Serializable assignable to UUID — нет
+                if (!params[i].isAssignableFrom(argTypes[i])) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return m;
+        }
+
+        throw new NoSuchMethodException(
+                clazz.getName() + "." + methodName + Arrays.toString(argTypes)
+        );
     }
 
     private static String resolveParameterizedType(ParameterizedType pt, Class<?> iface, Map<Class<?>, Class<?>> overrides) {

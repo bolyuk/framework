@@ -82,6 +82,18 @@ public class Table<ID extends Serializable, T extends HasID<ID>> {
         });
     }
 
+    public void deleteByIds(List<ID> ids) {
+        db.transaction(session,s -> {
+            List<T> refs = s.findMultiple(entityClass, ids);
+
+            for (T ref : refs) {
+                s.remove(ref);
+            }
+
+            return null;
+        });
+    }
+
     public <V> Optional<T> findOneBy(String field, V value) {
         return db.transaction(session, (s) ->
                 s.createQuery(

@@ -5,9 +5,9 @@ import bl0.bjs.common.core.event.Event;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class BoundObject<T> {
+public class FactorizedObject<T> {
     private T object;
-    private final ConcurrentLinkedQueue<INotifier<?, ?>> bindings = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<IObservable<?, ?>> bindings = new ConcurrentLinkedQueue<>();
     private final Event<Void, T> factory;
     private boolean isDirty = true;
     private final Action updateListener = e -> this.markDirty();
@@ -15,19 +15,19 @@ public class BoundObject<T> {
     private long delay = 5;
     private long lastDelay = 0;
 
-    public BoundObject(T object, Event<Void, T> factory, INotifier<?, ?> ... bindings) {
+    public FactorizedObject(T object, Event<Void, T> factory, IObservable<?, ?>... bindings) {
         this.object = object;
         this.factory = factory;
-        for (INotifier<?, ?> binding : bindings) {
+        for (IObservable<?, ?> binding : bindings) {
             this.bind(binding);
         }
     }
 
-    public BoundObject(T object, Event<Void, T> factory, long delay, INotifier<?, ?> ... bindings) {
+    public FactorizedObject(T object, Event<Void, T> factory, long delay, IObservable<?, ?>... bindings) {
         this.object = object;
         this.factory = factory;
         this.delay = delay;
-        for (INotifier<?, ?> binding : bindings) {
+        for (IObservable<?, ?> binding : bindings) {
             this.bind(binding);
         }
     }
@@ -36,8 +36,8 @@ public class BoundObject<T> {
         this.isDirty = true;
     }
 
-    public BoundObject<T> unbindAll() {
-        for (INotifier<?, ?> binding : this.bindings) {
+    public FactorizedObject<T> unbindAll() {
+        for (IObservable<?, ?> binding : this.bindings) {
             this.unbind(binding);
         }
         return this;
@@ -52,13 +52,13 @@ public class BoundObject<T> {
         return this.object;
     }
 
-    private BoundObject<T> bind(INotifier<?, ?> notifier) {
+    private FactorizedObject<T> bind(IObservable<?, ?> notifier) {
         this.bindings.add(notifier);
         notifier.addListener(this.updateListener);
         return this;
     }
 
-    private BoundObject<T> unbind(INotifier<?, ?> notifier) {
+    private FactorizedObject<T> unbind(IObservable<?, ?> notifier) {
         this.bindings.remove(notifier);
         notifier.remListener(this.updateListener);
         return this;
