@@ -1,12 +1,20 @@
 package bl0.bjs.common.core.event.action;
 
+import bl0.bjs.common.core.tuple.Pair;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ActionController<T> implements IActionController<T, Action<T>> {
 
     protected final ArrayList<Action<T>> actions = new  ArrayList<>();
+    protected final ArrayList<Pair<Integer,Action<T>>> scheduledActions = new ArrayList<>();
     protected final HashMap<String, TaggedAction<T>> taggedActions = new HashMap<>();
+
+    @Override
+    public void schedule(int delay, Action<T> action) {
+        scheduledActions.add(new Pair<>(delay, action));
+    }
 
     @Override
     public void register(Action<T> action) {
@@ -19,7 +27,7 @@ public class ActionController<T> implements IActionController<T, Action<T>> {
     }
 
     @Override
-    public void registerSingle(TaggedAction<T> tagged) {
+    public void registerUnique(TaggedAction<T> tagged) {
         taggedActions.put(tagged.tag(), tagged);
     }
 
@@ -30,6 +38,11 @@ public class ActionController<T> implements IActionController<T, Action<T>> {
         for(TaggedAction<T> taggedAction : new ArrayList<>(taggedActions.values()))
             taggedAction.invoke(data);
 
+        for (var pair : scheduledActions) {
+            pair.first--;
+            if(pair.first == 0)
+                pair.second.invoke(data);
+        }
     }
 
     public void clear(){
