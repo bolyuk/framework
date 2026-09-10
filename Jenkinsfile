@@ -11,7 +11,10 @@ pipeline {
         }
         stage('Deploy') {
             when {
-                branch 'master'
+                anyOf {
+                    branch 'master'
+                    branch '1.0'
+                }
             }
             steps {
                 configFileProvider([configFile(fileId: '413c037e-55bf-4e38-96e3-0428513e6856', variable: 'MAVEN_SETTINGS')]) {
