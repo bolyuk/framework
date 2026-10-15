@@ -20,12 +20,12 @@ public class BJSDB implements IBJSDBService {
         this.logger = ctx.generateLogger(this.getClass());
     }
 
-    public void connect(String host, String dbName, String username, String password, String entitiesPath){
-        sessionFactory = HibernateUtil.buildSessionFactory(host, dbName, username, password, entitiesPath);
+    public void connect(String host, String dbName, String username, String password, String... entitiesPaths){
+        sessionFactory = HibernateUtil.buildSessionFactory(host, dbName, username, password, entitiesPaths);
     }
 
-    public void connectSQLite(String file, String entitiesPath){
-        sessionFactory = HibernateUtil.buildSQLiteSessionFactory(file, entitiesPath);
+    public void connectSQLite(String file, String... entitiesPaths){
+        sessionFactory = HibernateUtil.buildSQLiteSessionFactory(file, entitiesPaths);
     }
 
     public boolean isConnected(){

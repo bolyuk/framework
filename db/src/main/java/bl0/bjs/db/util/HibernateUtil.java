@@ -7,11 +7,13 @@ import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.reflections.Reflections;
 
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class HibernateUtil {
 
-    public static SessionFactory buildSessionFactory(String host, String dbName, String user, String password, String entitiesPath) {
+    public static SessionFactory buildSessionFactory(String host, String dbName, String user, String password, String... entitiesPaths) {
         try {
             Map<String, Object> settings = Map.of(
                     "hibernate.connection.driver_class", "org.mariadb.jdbc.Driver",
@@ -26,10 +28,7 @@ public class HibernateUtil {
                     .build();
 
             MetadataSources sources = new MetadataSources(registry);
-
-            Reflections reflections = new Reflections(entitiesPath);
-            var entities = reflections.getTypesAnnotatedWith(Entity.class);
-            for (Class<?> entity : entities) {
+            for (Class<?> entity : scanEntityClasses(entitiesPaths)) {
                 sources.addAnnotatedClass(entity);
             }
 
@@ -41,7 +40,7 @@ public class HibernateUtil {
 
     public static SessionFactory buildSQLiteSessionFactory(
             String databaseFile,
-            String entitiesPath
+            String... entitiesPaths
     ) {
         try {
 
@@ -70,13 +69,7 @@ public class HibernateUtil {
                             .build();
 
             MetadataSources sources = new MetadataSources(registry);
-
-            Reflections reflections = new Reflections(entitiesPath);
-
-            var entities =
-                    reflections.getTypesAnnotatedWith(Entity.class);
-
-            for (Class<?> entity : entities) {
+            for (Class<?> entity : scanEntityClasses(entitiesPaths)) {
                 sources.addAnnotatedClass(entity);
             }
 
@@ -90,5 +83,18 @@ public class HibernateUtil {
                     e
             );
         }
+    }
+
+    /** Scans every given package root for @Entity classes and merges the results (deduped, in case
+     *  two roots overlap). An app's own entities typically live in one package, but a shared
+     *  library (e.g. aeon-framework's generic auth entities) contributes its own entities from a
+     *  completely different package root - this is why a single entitiesPath was never enough once
+     *  more than one source of entities existed on the classpath. */
+    private static Set<Class<?>> scanEntityClasses(String... entitiesPaths) {
+        Set<Class<?>> entities = new LinkedHashSet<>();
+        for (String path : entitiesPaths) {
+            entities.addAll(new Reflections(path).getTypesAnnotatedWith(Entity.class));
+        }
+        return entities;
     }
 }
