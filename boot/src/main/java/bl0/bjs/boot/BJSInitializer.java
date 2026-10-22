@@ -53,7 +53,7 @@ public class BJSInitializer {
     }
 
     private void catchExceptions(Thread t, Throwable e) {
-        logger.add(new LogEntry("Uncaught exception!", Arrays.toString(e.getStackTrace()), e.getMessage(), Level.FATAL, Instant.now()));
+        logger.add(new LogEntry(logger,"Uncaught exception!", Arrays.toString(e.getStackTrace()), e.getMessage(), Level.FATAL, Instant.now()));
     }
 
     public static IContext defaultInit(String hostname) {

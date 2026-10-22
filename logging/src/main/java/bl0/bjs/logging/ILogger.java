@@ -34,4 +34,10 @@ public interface ILogger {
     ILogBatch genLocalBatchIfNull(ILogBatch batch);
 
     void flushBatch(ILogBatch batch);
+
+    ILogger genSubLogger(Class<?> clazz);
+
+    ILogger getParentLogger();
+
+    String getBinding();
 }

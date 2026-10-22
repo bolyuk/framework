@@ -17,67 +17,79 @@ public class DefaultLogger implements ILogger {
     final IEventBusController<LogBatchEvent, LogBatchEvent.LogPayload> batchLogController;
     final Context context;
     final Class<?> binding;
+    final DefaultLogger parent;
 
     public DefaultLogger(Context context, Class<?> binding) {
         this.everyLogController = context.getEventBus().getController(LogEvent.class);
         this.batchLogController = context.getEventBus().getController(LogBatchEvent.class);
         this.context = context;
         this.binding = binding;
+        this.parent = null;
+    }
+
+    public DefaultLogger(DefaultLogger parent, Class<?> binding) {
+        var ctx = parent.context;
+
+        this.everyLogController = ctx.getEventBus().getController(LogEvent.class);
+        this.batchLogController = ctx.getEventBus().getController(LogBatchEvent.class);
+        this.context = ctx;
+        this.binding = binding;
+        this.parent = parent;
     }
 
     @Override
     public void log(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.INFO, Instant.now()));
+        add(new LogEntry(this, msg.toString(), extra_info, null, Level.INFO, Instant.now()));
     }
 
     @Override
     public void log(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.INFO, Instant.now()));
+        add(new LogEntry(this, msg.toString(), null, null, Level.INFO, Instant.now()));
     }
 
     @Override
     public void warn(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.WARNING, Instant.now()));
+        add(new LogEntry(this, msg.toString(), extra_info, null, Level.WARNING, Instant.now()));
     }
 
     @Override
     public void warn(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.WARNING, Instant.now()));
+        add(new LogEntry(this, msg.toString(), null, null, Level.WARNING, Instant.now()));
     }
 
     @Override
     public void err(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.ERROR, Instant.now()));
+        add(new LogEntry(this, msg.toString(), null, null, Level.ERROR, Instant.now()));
     }
 
     @Override
     public void err(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e.toString(), Level.ERROR, Instant.now()));
+        add(new LogEntry(this, msg.toString(), null, e.toString(), Level.ERROR, Instant.now()));
     }
 
     @Override
     public void err(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.ERROR, Instant.now()));
+        add(new LogEntry(this, msg.toString(), extra_info, null, Level.ERROR, Instant.now()));
     }
 
     @Override
     public void err(Object msg, String extra_info, Throwable e) {
-        add(new LogEntry(msg.toString(), extra_info, e.toString(), Level.ERROR, Instant.now()));
+        add(new LogEntry(this, msg.toString(), extra_info, e.toString(), Level.ERROR, Instant.now()));
     }
 
     @Override
     public void debug(Object msg, String extra_info) {
-        add(new LogEntry(msg.toString(), extra_info, null, Level.DEBUG, Instant.now()));
+        add(new LogEntry(this, msg.toString(), extra_info, null, Level.DEBUG, Instant.now()));
     }
 
     @Override
     public void debug(Object msg) {
-        add(new LogEntry(msg.toString(), null, null, Level.DEBUG, Instant.now()));
+        add(new LogEntry(this, msg.toString(), null, null, Level.DEBUG, Instant.now()));
     }
 
     @Override
     public void debug(Object msg, Throwable e) {
-        add(new LogEntry(msg.toString(), null, e.toString(), Level.DEBUG, Instant.now()));
+        add(new LogEntry(this, msg.toString(), null, e.toString(), Level.DEBUG, Instant.now()));
     }
 
     @Override
@@ -88,6 +100,21 @@ public class DefaultLogger implements ILogger {
     @Override
     public void flushBatch(ILogBatch batch) {
         batchLogController.fireEvent(new LogBatchEvent.LogPayload(binding, batch));
+    }
+
+    @Override
+    public ILogger genSubLogger(Class<?> clazz) {
+        return new DefaultLogger(this, clazz);
+    }
+
+    @Override
+    public ILogger getParentLogger() {
+        return parent;
+    }
+
+    @Override
+    public String getBinding() {
+        return binding.getSimpleName();
     }
 
     @Override
