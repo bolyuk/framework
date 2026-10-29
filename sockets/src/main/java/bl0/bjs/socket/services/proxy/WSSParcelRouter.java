@@ -13,6 +13,7 @@ import bl0.bjs.socket.services.IWebSocketService;
 import com.google.gson.reflect.TypeToken;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -102,9 +103,12 @@ public class WSSParcelRouter extends BJSBaseClass {
                     socket.send(answerParcel);
                 }
             } catch (Exception e) {
-                l.err(e.toString(), Arrays.toString(e.getStackTrace()), e);
+                // method.invoke wraps whatever the service threw in an InvocationTargetException,
+                // whose own message is always null - report the service's exception instead.
+                Throwable cause = e instanceof InvocationTargetException ite && ite.getCause() != null ? ite.getCause() : e;
+                l.err(cause.toString(), Arrays.toString(cause.getStackTrace()), cause);
                 answerPayload.setSuccess(false);
-                answerPayload.setData(GSON.toJson(e.getMessage()));
+                answerPayload.setData(GSON.toJson(cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName()));
                 answerPayload.setType(String.class.getName());
                 socket.send(answerParcel);
             }

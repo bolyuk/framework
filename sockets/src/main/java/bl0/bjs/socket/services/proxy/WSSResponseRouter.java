@@ -102,7 +102,7 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
                 value = gson.fromJson(response.getData(), gsonType);
             }
             else
-                value = new WSException(response.getData());
+                value = new WSException(errorMessageOf(response));
         } catch (ClassNotFoundException e) {
             l.err("response class [" + response.getType() + "] was not found");
             return false;
@@ -116,6 +116,17 @@ public class WSSResponseRouter extends BJSBaseClass implements IResponseAwaiter 
             s.latch.countDown();
         }
         return true;
+    }
+
+    // WSSParcelRouter sends the error message JSON-encoded (a quoted string) - decode it so callers
+    // see the plain text. Anything that isn't a JSON string (an older peer) is passed through as is.
+    private String errorMessageOf(WSSResponse response) {
+        try {
+            String decoded = gson.fromJson(response.getData(), String.class);
+            return decoded != null ? decoded : response.getData();
+        } catch (RuntimeException e) {
+            return response.getData();
+        }
     }
 
     private boolean handleStream(AwaitState s, WSSResponse response, Object value, UUID uuid) {
